@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default function HomePage() {
   const categories = [
     { name: 'K-Beauty', emoji: '💄', slug: 'k-beauty', desc: '護膚、彩妝、保養' },

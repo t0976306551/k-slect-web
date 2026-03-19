@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { AppError, NotFoundError } from '@/lib/errors'
 
+export const dynamic = 'force-dynamic'
+
 type ApiSuccess<T> = { data: T; error: null }
 type ApiError = { data: null; error: { code: string; message: string } }
 

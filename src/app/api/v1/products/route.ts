@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AppError, ValidationError } from '@/lib/errors'
 
+export const dynamic = 'force-dynamic'
+
 type ApiSuccess<T> = { data: T; error: null }
 type ApiError = { data: null; error: { code: string; message: string } }
 

@@ -1,5 +1,3 @@
-'use client'
-
 export interface CartItem {
   readonly productId: string
   readonly productName: string
