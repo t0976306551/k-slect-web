@@ -5,6 +5,7 @@ export interface ApiResponse<T> {
 
 export interface Product {
   id: string
+  slug?: string | null
   name: string
   description: string | null
   price: number

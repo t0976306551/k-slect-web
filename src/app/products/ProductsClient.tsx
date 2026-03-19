@@ -91,7 +91,12 @@ export default function ProductsClient() {
           {products.map((product) => (
             <ProductCard
               key={product.id}
-              product={product}
+              id={product.id}
+              slug={product.slug}
+              name={product.name}
+              price={product.price}
+              inStock={product.status === 'active' && (product.inventory?.quantity ?? 0) > 0}
+              categoryName={product.category?.name}
               onAddToCart={handleAddToCart}
             />
           ))}
