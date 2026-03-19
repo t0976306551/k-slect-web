@@ -1,6 +1,12 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: '找不到頁面',
+  robots: { index: false },
+}
 
 export default function NotFound() {
   return (

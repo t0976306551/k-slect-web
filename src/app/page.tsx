@@ -1,6 +1,18 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'K-slect 韓貨嚴選 | 台灣最值得信賴的韓貨電商',
+  description: 'K-slect 嚴選正品韓貨，涵蓋韓國美妝、零食、服飾、偶像周邊。台灣現貨，快速出貨。',
+  openGraph: {
+    title: 'K-slect 韓貨嚴選 | 台灣最值得信賴的韓貨電商',
+    description: 'K-slect 嚴選正品韓貨，涵蓋韓國美妝、零食、服飾、偶像周邊。台灣現貨，快速出貨。',
+    type: 'website',
+    url: '/',
+  },
+}
 
 export default function HomePage() {
   const categories = [

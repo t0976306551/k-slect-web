@@ -17,8 +17,20 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "K-slect 韓貨嚴選",
-  description: "台灣最好的韓貨電商平台，精選 K-beauty、服飾、食品",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://k-slect.com"),
+  title: {
+    template: "%s | K-slect 韓貨嚴選",
+    default: "K-slect 韓貨嚴選 | 台灣最值得信賴的韓貨電商",
+  },
+  description: "K-slect 嚴選正品韓貨，涵蓋韓國美妝、零食、服飾、偶像周邊。台灣現貨，快速出貨。",
+  openGraph: {
+    siteName: "K-slect 韓貨嚴選",
+    locale: "zh_TW",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({
