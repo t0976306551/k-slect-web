@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/v1/cron/send-promotions",
-      "schedule": "* * * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }
