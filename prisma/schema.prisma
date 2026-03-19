@@ -80,13 +80,20 @@ model OrderItem {
 }
 
 model Promotion {
-  id         String   @id @default(cuid())
-  channel    String   // LINE | FB
-  productIds String[] // 關聯商品 ID 陣列
-  message    String   // 推廣訊息文案
-  utmUrl     String?  // 附帶 UTM 的追蹤連結
-  status     String   @default("draft") // draft | sent | scheduled | failed
-  metadata   Json?    // 擴充欄位（FB post ID、排程時間等）
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String    @id @default(cuid())
+  channel         String    // LINE | FB（向後相容）
+  platform        String    @default("LINE") // line | facebook | both
+  productIds      String[]  // 關聯商品 ID 陣列
+  message         String    // 推廣訊息文案
+  utmUrl          String?   // 附帶 UTM 的追蹤連結
+  status          String    @default("draft") // draft | scheduled | sent | failed
+  aiGeneratedCopy Json?     // { line: string, facebook: string }
+  scheduledAt     DateTime? // 排程發送時間
+  sendStatus      String    @default("pending") // pending | sent | failed
+  sentAt          DateTime? // 實際發送時間
+  metadata        Json?     // 擴充欄位（FB post ID、retry_count、last_error 等）
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([sendStatus, scheduledAt])
 }
