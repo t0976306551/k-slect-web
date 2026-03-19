@@ -1,16 +1,21 @@
 export const dynamic = 'force-dynamic'
 
 import type { Metadata } from 'next'
+import { permanentRedirect, notFound } from 'next/navigation'
 import { cache } from 'react'
 import { prisma } from '@/lib/prisma'
+import { isCuid } from '@/lib/slug'
 import ProductDetailClient from './ProductDetailClient'
 
 type Props = { params: Promise<{ id: string }> }
 
-const getProduct = cache(async (id: string) => {
+const getProduct = cache(async (idOrSlug: string) => {
+  const where = isCuid(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }
   return prisma.product.findUnique({
-    where: { id },
+    where,
     select: {
+      id: true,
+      slug: true,
       name: true,
       description: true,
       price: true,
@@ -34,15 +39,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${product.description.slice(0, 100)} `
     : ''
   const description = `${product.name} 正品直送，台灣現貨快速出貨。NT$${product.price.toLocaleString('zh-TW')} 起！${descriptionText}`
+  const canonicalSlug = product.slug ?? id
 
   return {
     title: `${product.name} - 正品韓貨`,
     description,
+    alternates: { canonical: `/products/${canonicalSlug}` },
     openGraph: {
       title: `${product.name} | K-slect 韓貨嚴選`,
       description: product.description ?? description,
       type: 'website',
-      url: `/products/${id}`,
+      url: `/products/${canonicalSlug}`,
     },
   }
 }
@@ -51,6 +58,19 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://k-slect.com'
 
 export default async function ProductDetailPage({ params }: Props) {
   const { id } = await params
+
+  // 舊 cuid URL → 永久 redirect 到 slug URL
+  if (isCuid(id)) {
+    const product = await prisma.product.findUnique({
+      where: { id },
+      select: { slug: true },
+    })
+    if (!product) notFound()
+    if (product.slug) {
+      permanentRedirect(`/products/${product.slug}`)
+    }
+  }
+
   const product = await getProduct(id)
 
   const productSchema = product
@@ -63,9 +83,8 @@ export default async function ProductDetailPage({ params }: Props) {
           '@type': 'Offer',
           price: product.price,
           priceCurrency: 'TWD',
-          availability:
-            'https://schema.org/InStock',
-          url: `${SITE_URL}/products/${id}`,
+          availability: 'https://schema.org/InStock',
+          url: `${SITE_URL}/products/${product.slug ?? id}`,
         },
       }
     : null

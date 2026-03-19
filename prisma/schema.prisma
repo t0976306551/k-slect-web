@@ -21,6 +21,7 @@ model Category {
 model Product {
   id          String     @id @default(cuid())
   name        String
+  slug        String?    @unique // kebab-case，SEO URL 用
   description String?
   price       Int        // 台幣元，避免浮點數誤差
   status      String     @default("active") // active | inactive

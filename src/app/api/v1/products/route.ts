@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AppError, ValidationError } from '@/lib/errors'
+import { generateSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +29,7 @@ function fail(e: unknown): NextResponse<ApiError> {
 
 const createProductSchema = z.object({
   name: z.string().min(1),
+  slug: z.string().min(1).optional(), // 若未提供則由 name 自動生成
   description: z.string().optional(),
   price: z.number().int().positive(),
   status: z.enum(['active', 'inactive']).default('active'),
@@ -75,10 +77,12 @@ export async function POST(req: NextRequest) {
       throw new ValidationError(result.error.message)
     }
 
-    const { inventory, ...productData } = result.data
+    const { inventory, slug: providedSlug, ...productData } = result.data
+    const slug = providedSlug ?? generateSlug(productData.name)
     const product = await prisma.product.create({
       data: {
         ...productData,
+        slug,
         ...(inventory ? { inventory: { create: inventory } } : {}),
       },
       include: {

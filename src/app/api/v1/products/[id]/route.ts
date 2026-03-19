@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AppError, NotFoundError, ValidationError } from '@/lib/errors'
+import { isCuid } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +29,7 @@ function fail(e: unknown): NextResponse<ApiError> {
 
 const updateProductSchema = z.object({
   name: z.string().min(1).optional(),
+  slug: z.string().min(1).optional(),
   description: z.string().optional(),
   price: z.number().int().positive().optional(),
   status: z.enum(['active', 'inactive']).optional(),
@@ -39,8 +41,10 @@ type RouteContext = { params: Promise<{ id: string }> }
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params
+    // 支援 slug 查詢（非 cuid 格式視為 slug）
+    const where = isCuid(id) ? { id } : { slug: id }
     const product = await prisma.product.findUnique({
-      where: { id },
+      where,
       include: {
         category: { select: { id: true, name: true, slug: true } },
         inventory: true,
