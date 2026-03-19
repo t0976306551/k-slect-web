@@ -10,7 +10,8 @@ import CartSummary from '@/components/CartSummary'
 import type { CartItem } from '@/lib/cart'
 
 export default function ProductDetailClient() {
-  const { id } = useParams<{ id: string }>()
+  const params = useParams<{ id: string }>()
+  const id = params?.id ?? ''
   const router = useRouter()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
