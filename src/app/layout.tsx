@@ -1,28 +1,30 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import TabBar from "@/components/TabBar";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
 });
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://k-slect.com"),
   title: {
-    template: "%s | K-slect 韓貨嚴選",
-    default: "K-slect 韓貨嚴選 | 台灣最值得信賴的韓貨電商",
+    template: "%s | 韓好物",
+    default: "韓好物 | 韓國直送嚴選好物",
   },
-  description: "K-slect 嚴選正品韓貨，涵蓋韓國美妝、零食、服飾、偶像周邊。台灣現貨，快速出貨。",
+  description: "從首爾到台灣，美妝、零食、服飾一站購足。嚴選正品韓貨，快速出貨。",
   openGraph: {
-    siteName: "K-slect 韓貨嚴選",
+    siteName: "韓好物",
     locale: "zh_TW",
     type: "website",
   },
@@ -38,13 +40,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-TW">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen`}
-      >
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      </head>
+      <body className={`${fraunces.variable} ${jakarta.variable} antialiased min-h-screen bg-[#F7F6F3]`}>
         <Navbar />
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          {children}
-        </main>
+        <main className="pb-20 md:pb-0">{children}</main>
+        <TabBar />
       </body>
     </html>
   );

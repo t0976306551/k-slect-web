@@ -3,27 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-
-interface CategoryProduct {
-  id: string
-  name: string
-  slug: string | null
-  price: number
-  status: string
-  inventory: { quantity: number } | null
-}
-
-interface CategoryData {
-  id: string
-  name: string
-  slug: string
-  products: CategoryProduct[]
-}
+import Image from 'next/image'
+import { fetchCategoryBySlug } from '@/lib/api'
+import type { MockCategoryData, MockCategoryProduct } from '@/lib/api'
 
 export default function CategoryClient() {
   const params = useParams<{ slug: string }>()
   const slug = params?.slug ?? ''
-  const [category, setCategory] = useState<CategoryData | null>(null)
+  const [category, setCategory] = useState<MockCategoryData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,12 +19,11 @@ export default function CategoryClient() {
       setLoading(true)
       setError(null)
       try {
-        const res = await fetch(`/api/v1/categories/${slug}`)
-        const json = await res.json() as { data: CategoryData | null; error: { message: string } | null }
-        if (json.error) {
-          setError(json.error.message)
+        const res = await fetchCategoryBySlug(slug)
+        if (res.error) {
+          setError(res.error.message)
         } else {
-          setCategory(json.data)
+          setCategory(res.data)
         }
       } catch {
         setError('載入分類失敗，請稍後再試')
@@ -85,7 +71,7 @@ export default function CategoryClient() {
         <div className="text-center py-16 text-gray-400">此分類目前無商品</div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {category.products.map((product) => {
+          {category.products.map((product: MockCategoryProduct) => {
             const inStock = (product.inventory?.quantity ?? 0) > 0
             const isActive = product.status === 'active'
             const href = `/products/${product.slug ?? product.id}`
@@ -95,8 +81,20 @@ export default function CategoryClient() {
                 href={href}
                 className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden hover:shadow-md transition-shadow block"
               >
-                <div className="bg-purple-50 h-40 flex items-center justify-center">
-                  <span className="text-5xl">🛍️</span>
+                <div className="bg-purple-50 h-40 relative overflow-hidden">
+                  {product.image ? (
+                    <Image
+                      src={product.image}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 50vw, 25vw"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <span className="text-5xl">🛍️</span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-4">
                   <h3 className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2 min-h-[2.5rem]">
@@ -106,7 +104,7 @@ export default function CategoryClient() {
                     NT$ {product.price.toLocaleString('zh-TW')}
                   </p>
                   <p className={`text-xs mt-1 ${inStock && isActive ? 'text-green-600' : 'text-gray-400'}`}>
-                    {!isActive ? '已下架' : inStock ? `庫存 ${product.inventory!.quantity} 件` : '已售完'}
+                    {!isActive ? '已下架' : inStock ? '現貨' : '已售完'}
                   </p>
                 </div>
               </Link>

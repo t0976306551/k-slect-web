@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { Trash2 } from 'lucide-react'
 import { getCart, updateQuantity, removeFromCart, getCartTotal, getCartCount } from '@/lib/cart'
 import type { CartItem } from '@/lib/cart'
 
@@ -27,13 +29,13 @@ export default function CartClient() {
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-24">
+      <div className="text-center py-24 px-4">
         <div className="text-6xl mb-4">🛒</div>
-        <h2 className="text-xl font-semibold text-gray-600 mb-2">購物車是空的</h2>
-        <p className="text-gray-400 text-sm mb-6">快去挑選你喜歡的韓貨吧！</p>
+        <h2 className="font-jakarta text-[18px] font-semibold text-[#2D2D2D] mb-2">購物車是空的</h2>
+        <p className="font-jakarta text-[13px] text-[#8E8E93] mb-6">快去挑選你喜歡的韓貨吧！</p>
         <Link
           href="/products"
-          className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold px-8 py-3 rounded-full transition-colors"
+          className="inline-block font-jakarta font-semibold text-[14px] bg-[#7C9070] hover:bg-[#6a7d5f] text-white px-8 py-3 rounded-[10px] transition-colors"
         >
           去逛逛
         </Link>
@@ -42,76 +44,93 @@ export default function CartClient() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">購物車</h1>
+    <div className="max-w-[720px] mx-auto px-4 md:px-6 py-4 md:py-8">
+      <h1 className="font-jakarta text-[18px] md:text-[22px] font-bold text-[#2D2D2D] mb-4 md:mb-6">購物車</h1>
 
-      <div className="space-y-3">
+      <div className="space-y-2.5 md:space-y-3 mb-5">
         {items.map((item) => (
           <div
             key={item.productId}
-            className="bg-white rounded-xl border border-purple-100 p-4 flex items-center gap-4"
+            className="bg-white rounded-[14px] border border-[#F0EFEC] p-3.5 md:p-4 flex items-center gap-3"
           >
-            <div className="bg-purple-50 w-16 h-16 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
-              🛍️
+            {/* Image */}
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-[10px] bg-[#F0EFEC] flex-shrink-0 overflow-hidden">
+              {item.image ? (
+                <Image
+                  src={item.image}
+                  alt={item.productName}
+                  width={64}
+                  height={64}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xl">🛍️</div>
+              )}
             </div>
+
+            {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-800 text-sm line-clamp-2">
+              <p className="font-jakarta font-medium text-[#2D2D2D] text-[13px] md:text-[14px] line-clamp-2 leading-tight">
                 {item.productName}
               </p>
-              <p className="text-purple-600 font-semibold text-sm mt-1">
+              <p className="font-jakarta text-[#7C9070] font-semibold text-[13px] md:text-[14px] mt-1">
                 NT$ {item.price.toLocaleString('zh-TW')}
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+
+            {/* Qty controls */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}
-                className="w-8 h-8 rounded-full border border-purple-200 flex items-center justify-center text-purple-600 hover:bg-purple-50 transition-colors"
+                className="w-7 h-7 rounded-full border border-[#E8E8E8] flex items-center justify-center text-[#2D2D2D] hover:border-[#7C9070] transition-colors text-[16px] leading-none"
               >
                 −
               </button>
-              <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+              <span className="w-5 text-center text-[13px] font-semibold text-[#2D2D2D]">{item.quantity}</span>
               <button
                 onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
-                className="w-8 h-8 rounded-full border border-purple-200 flex items-center justify-center text-purple-600 hover:bg-purple-50 transition-colors"
+                className="w-7 h-7 rounded-full border border-[#E8E8E8] flex items-center justify-center text-[#2D2D2D] hover:border-[#7C9070] transition-colors text-[16px] leading-none"
               >
                 +
               </button>
             </div>
-            <div className="flex-shrink-0 text-right">
-              <p className="font-bold text-gray-800 text-sm">
+
+            {/* Subtotal + remove */}
+            <div className="flex-shrink-0 text-right flex flex-col items-end gap-1">
+              <p className="font-jakarta font-bold text-[#2D2D2D] text-[13px]">
                 NT$ {(item.price * item.quantity).toLocaleString('zh-TW')}
               </p>
               <button
                 onClick={() => handleRemove(item.productId)}
-                className="text-xs text-red-400 hover:text-red-600 mt-1 transition-colors"
+                className="text-[#C0C0C0] hover:text-[#D4845E] transition-colors"
               >
-                移除
+                <Trash2 size={14} />
               </button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* 訂單摘要 */}
-      <div className="bg-white rounded-xl border border-purple-100 p-6 space-y-3">
-        <h2 className="font-semibold text-gray-800">訂單摘要</h2>
-        <div className="flex justify-between text-sm text-gray-600">
+      {/* Order summary */}
+      <div className="bg-white rounded-[16px] border border-[#F0EFEC] p-5 space-y-3">
+        <h2 className="font-jakarta font-semibold text-[#2D2D2D] text-[15px]">訂單摘要</h2>
+        <div className="flex justify-between text-[13px] text-[#6B6B6B]">
           <span>商品數量</span>
           <span>{count} 件</span>
         </div>
-        <div className="flex justify-between font-bold text-lg text-gray-800 border-t border-gray-100 pt-3">
+        <div className="flex justify-between font-jakarta font-bold text-[17px] text-[#2D2D2D] border-t border-[#F0EFEC] pt-3">
           <span>合計</span>
-          <span className="text-purple-700">NT$ {total.toLocaleString('zh-TW')}</span>
+          <span className="text-[#7C9070]">NT$ {total.toLocaleString('zh-TW')}</span>
         </div>
         <Link
           href="/checkout"
-          className="block text-center bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-colors mt-2"
+          className="block text-center bg-[#7C9070] hover:bg-[#6a7d5f] text-white font-jakarta font-semibold text-[15px] py-3.5 rounded-[10px] transition-colors mt-1"
         >
           前往結帳
         </Link>
         <Link
           href="/products"
-          className="block text-center text-sm text-purple-500 hover:underline"
+          className="block text-center text-[13px] text-[#7C9070] hover:underline"
         >
           繼續購物
         </Link>
@@ -119,3 +138,4 @@ export default function CartClient() {
     </div>
   )
 }
+

@@ -3,13 +3,28 @@ export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import { permanentRedirect, notFound } from 'next/navigation'
 import { cache } from 'react'
-import { prisma } from '@/lib/prisma'
 import { isCuid } from '@/lib/slug'
 import ProductDetailClient from './ProductDetailClient'
+import { mockFetchProduct } from '@/lib/mock-handlers'
 
-type Props = { params: Promise<{ id: string }> }
+type Props = { params: Promise<{ slug: string }> }
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
 
 const getProduct = cache(async (idOrSlug: string) => {
+  if (USE_MOCK) {
+    const res = await mockFetchProduct(idOrSlug)
+    if (res.error || !res.data) return null
+    return {
+      id: res.data.id,
+      slug: res.data.slug,
+      name: res.data.name,
+      description: res.data.description,
+      price: res.data.price,
+      category: null as { name: string; slug: string | null } | null,
+    }
+  }
+  const { prisma } = await import('@/lib/prisma')
   const where = isCuid(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }
   return prisma.product.findUnique({
     where,
@@ -25,8 +40,8 @@ const getProduct = cache(async (idOrSlug: string) => {
 })
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params
-  const product = await getProduct(id)
+  const { slug } = await params
+  const product = await getProduct(slug)
 
   if (!product) {
     return {
@@ -39,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${product.description.slice(0, 100)} `
     : ''
   const description = `${product.name} 正品直送，台灣現貨快速出貨。NT$${product.price.toLocaleString('zh-TW')} 起！${descriptionText}`
-  const canonicalSlug = product.slug ?? id
+  const canonicalSlug = product.slug ?? slug
 
   return {
     title: `${product.name} - 正品韓貨`,
@@ -57,12 +72,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://k-slect.com'
 
 export default async function ProductDetailPage({ params }: Props) {
-  const { id } = await params
+  const { slug } = await params
 
-  // 舊 cuid URL → 永久 redirect 到 slug URL
-  if (isCuid(id)) {
+  // 舊 cuid URL → 永久 redirect 到 slug URL（mock 模式下跳過）
+  if (!USE_MOCK && isCuid(slug)) {
+    const { prisma } = await import('@/lib/prisma')
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: { id: slug },
       select: { slug: true },
     })
     if (!product) notFound()
@@ -71,7 +87,7 @@ export default async function ProductDetailPage({ params }: Props) {
     }
   }
 
-  const product = await getProduct(id)
+  const product = await getProduct(slug)
 
   const productSchema = product
     ? {
@@ -84,7 +100,7 @@ export default async function ProductDetailPage({ params }: Props) {
           price: product.price,
           priceCurrency: 'TWD',
           availability: 'https://schema.org/InStock',
-          url: `${SITE_URL}/products/${product.slug ?? id}`,
+          url: `${SITE_URL}/products/${product.slug ?? slug}`,
         },
       }
     : null

@@ -31,19 +31,19 @@ export default function ProductCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-[16px] overflow-hidden hover:shadow-md transition-shadow">
       <Link href={href}>
-        <div className="bg-purple-50 h-48 flex items-center justify-center">
-          <span className="text-5xl">🛍️</span>
+        <div className="bg-[#F0EFEC] h-[200px] flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-[#E8E5E0]" />
         </div>
-        <div className="p-4">
-          <h3 className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2 min-h-[2.5rem]">
+        <div className="p-4 flex flex-col gap-2">
+          {categoryName && (
+            <p className="font-jakarta text-[11px] text-[#8E8E93]">{categoryName}</p>
+          )}
+          <h3 className="font-jakarta font-semibold text-[14px] text-[#2D2D2D] leading-tight line-clamp-2">
             {name}
           </h3>
-          {categoryName && (
-            <p className="text-xs text-purple-400 mt-1">{categoryName}</p>
-          )}
-          <p className="text-lg font-bold text-purple-700 mt-2">
+          <p className="font-jakarta text-[16px] font-semibold text-[#7C9070]">
             NT$ {price.toLocaleString('zh-TW')}
           </p>
         </div>
@@ -52,7 +52,7 @@ export default function ProductCard({
         <button
           onClick={handleAddToCart}
           disabled={!inStock}
-          className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-medium py-2 rounded-lg transition-colors"
+          className="w-full bg-[#7C9070] hover:bg-[#6a7d5f] disabled:bg-[#E0DDD8] disabled:text-[#8E8E93] text-white text-[14px] font-semibold font-jakarta py-2.5 rounded-[10px] transition-colors"
         >
           {inStock ? '加入購物車' : '已售完'}
         </button>

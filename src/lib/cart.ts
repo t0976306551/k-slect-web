@@ -3,6 +3,8 @@ export interface CartItem {
   readonly productName: string
   readonly price: number
   quantity: number
+  readonly image?: string
+  readonly slug?: string
 }
 
 const CART_KEY = 'k_slect_cart'

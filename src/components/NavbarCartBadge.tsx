@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { ShoppingBag } from 'lucide-react'
 import { getCart, getCartCount } from '@/lib/cart'
 
 export default function NavbarCartBadge() {
@@ -17,14 +18,10 @@ export default function NavbarCartBadge() {
   }, [])
 
   return (
-    <Link
-      href="/cart"
-      className="relative flex items-center gap-1 text-sm text-gray-600 hover:text-purple-600 transition-colors"
-    >
-      <span className="text-lg">🛒</span>
-      <span className="hidden sm:block">購物車</span>
+    <Link href="/cart" className="relative text-[#6B6B6B] hover:text-[#2D2D2D] transition-colors" aria-label="購物車">
+      <ShoppingBag size={20} />
       {cartCount > 0 && (
-        <span className="absolute -top-2 -right-3 bg-purple-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+        <span className="absolute -top-1.5 -right-1.5 bg-[#7C9070] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-jakarta font-semibold">
           {cartCount > 99 ? '99+' : cartCount}
         </span>
       )}

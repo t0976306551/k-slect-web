@@ -1,6 +1,6 @@
 /**
  * Prisma seed script
- * 用途：在 dev/staging 環境建立初始分類、商品與 slug 資料
+ * 用途：在 dev/staging 環境建立初始分類、商品、與 demo 訂單資料
  * 執行：npx tsx prisma/seed.ts
  */
 import { PrismaClient } from '@prisma/client'
@@ -158,6 +158,128 @@ async function main() {
     console.log(`  ✓ 商品: ${p.name} (${p.slug})`)
   }
 
+  // ── Demo 客戶與訂單 ────────────────────────────────────────────
+  const DEMO_EMAIL = 'demo@kslect.com'
+
+  // Upsert demo 客戶
+  const demoCustomer = await prisma.customer.upsert({
+    where: { email: DEMO_EMAIL },
+    update: { name: '林小美', phone: '0912-345-678', address: '台北市大安區忠孝東路四段100號' },
+    create: {
+      name: '林小美',
+      email: DEMO_EMAIL,
+      phone: '0912-345-678',
+      address: '台北市大安區忠孝東路四段100號',
+    },
+  })
+  console.log(`  ✓ 客戶: ${demoCustomer.name} (${demoCustomer.email})`)
+
+  // 撈需要的商品
+  const slugsNeeded = [
+    'cosrx-snail-96-mucin-essence-100ml',
+    'laneige-water-sleeping-mask-70ml',
+    'newjeans-official-photo-book-2nd-album',
+    'innisfree-green-tea-seed-cream-50ml',
+    'some-by-mi-aha-bha-pha-toner-150ml',
+  ]
+  const products = await prisma.product.findMany({
+    where: { slug: { in: slugsNeeded } },
+  })
+  const bySlug = Object.fromEntries(products.map((p) => [p.slug!, p]))
+
+  // Demo 訂單定義（4 種不同狀態）
+  type DemoOrderDef = {
+    status: string
+    paymentMethod: string
+    note?: string
+    createdAt: Date
+    items: { slug: string; quantity: number }[]
+  }
+
+  const DEMO_ORDERS: DemoOrderDef[] = [
+    {
+      status: 'completed',
+      paymentMethod: 'bank_transfer',
+      note: '請多包一層保護，謝謝',
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15天前
+      items: [
+        { slug: 'cosrx-snail-96-mucin-essence-100ml', quantity: 2 },
+        { slug: 'laneige-water-sleeping-mask-70ml', quantity: 1 },
+      ],
+    },
+    {
+      status: 'shipped',
+      paymentMethod: 'bank_transfer',
+      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5天前
+      items: [
+        { slug: 'newjeans-official-photo-book-2nd-album', quantity: 1 },
+        { slug: 'some-by-mi-aha-bha-pha-toner-150ml', quantity: 1 },
+      ],
+    },
+    {
+      status: 'confirmed',
+      paymentMethod: 'bank_transfer',
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2天前
+      items: [{ slug: 'innisfree-green-tea-seed-cream-50ml', quantity: 3 }],
+    },
+    {
+      status: 'pending',
+      paymentMethod: 'seller_ship',
+      note: '盡快出貨',
+      createdAt: new Date(Date.now() - 60 * 60 * 1000), // 1小時前
+      items: [
+        { slug: 'cosrx-snail-96-mucin-essence-100ml', quantity: 1 },
+        { slug: 'laneige-water-sleeping-mask-70ml', quantity: 2 },
+        { slug: 'innisfree-green-tea-seed-cream-50ml', quantity: 1 },
+      ],
+    },
+  ]
+
+  for (const def of DEMO_ORDERS) {
+    const validItems = def.items.filter((i) => bySlug[i.slug])
+    if (validItems.length === 0) continue
+
+    const totalAmount = validItems.reduce(
+      (sum, i) => sum + bySlug[i.slug].price * i.quantity,
+      0,
+    )
+
+    // 用 email 作為唯一鍵：若已有相同 status+paymentMethod 的 demo 訂單就跳過
+    const existing = await prisma.order.findFirst({
+      where: {
+        customerId: demoCustomer.id,
+        status: def.status,
+        paymentMethod: def.paymentMethod,
+        createdAt: { gte: new Date(def.createdAt.getTime() - 60_000) },
+      },
+    })
+    if (existing) {
+      console.log(`  ↩ 跳過既有 demo 訂單 (${def.status})`)
+      continue
+    }
+
+    const order = await prisma.order.create({
+      data: {
+        customerId: demoCustomer.id,
+        status: def.status,
+        paymentMethod: def.paymentMethod,
+        totalAmount,
+        note: def.note,
+        createdAt: def.createdAt,
+        items: {
+          create: validItems.map((i) => ({
+            productId: bySlug[i.slug].id,
+            quantity: i.quantity,
+            priceAtOrder: bySlug[i.slug].price,
+          })),
+        },
+      },
+    })
+    console.log(`  ✓ 訂單: ${order.id.slice(0, 12)}… [${def.status}] NT$${totalAmount}`)
+  }
+
+  console.log('')
+  console.log('💡 Demo 帳號 Email:', DEMO_EMAIL)
   console.log('✅ Seed 完成')
 }
 

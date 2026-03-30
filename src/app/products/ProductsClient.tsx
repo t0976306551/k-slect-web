@@ -1,19 +1,18 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import ProductCard from '@/components/ProductCard'
-import CartSummary from '@/components/CartSummary'
-import { getCart } from '@/lib/cart'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Search } from 'lucide-react'
+import { addToCart } from '@/lib/cart'
 import { fetchProducts } from '@/lib/api'
-import type { Product } from '@/lib/api'
-import type { CartItem } from '@/lib/cart'
+import type { ProductWithMeta } from '@/lib/api'
 
 export default function ProductsClient() {
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<ProductWithMeta[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -23,7 +22,7 @@ export default function ProductsClient() {
       if (res.error) {
         setError(res.error.message)
       } else {
-        setProducts(res.data ?? [])
+        setProducts((res.data ?? []) as ProductWithMeta[])
       }
     } catch {
       setError('載入商品失敗，請稍後再試')
@@ -33,77 +32,97 @@ export default function ProductsClient() {
   }, [search])
 
   useEffect(() => {
-    setCartItems(getCart())
-  }, [])
-
-  useEffect(() => {
     const timer = setTimeout(loadProducts, 300)
     return () => clearTimeout(timer)
   }, [loadProducts])
 
-  function handleAddToCart() {
-    setCartItems(getCart())
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">所有商品</h1>
+    <div className="max-w-[1440px] mx-auto px-3 md:px-12 py-4 md:py-8">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 mb-4 md:mb-6 px-1 md:px-0">
+        <h1 className="font-jakarta text-[18px] md:text-[24px] font-bold text-[#2D2D2D]">所有商品</h1>
         <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8E8E93]" />
           <input
             type="text"
             placeholder="搜尋商品..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-purple-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 w-full sm:w-64"
+            className="pl-9 pr-4 py-2 border border-[#F0EFEC] bg-white rounded-full text-[13px] text-[#2D2D2D] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#7C9070] transition-colors w-full sm:w-56"
           />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
         </div>
       </div>
 
       {loading && (
         <div className="flex items-center justify-center py-24">
-          <div className="text-purple-400 text-lg">載入中...</div>
+          <div className="w-7 h-7 rounded-full border-2 border-[#7C9070] border-t-transparent animate-spin" />
         </div>
       )}
 
       {!loading && error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-red-600">{error}</p>
-          <button
-            onClick={loadProducts}
-            className="mt-3 text-sm text-purple-600 hover:underline"
-          >
+        <div className="bg-red-50 border border-red-100 rounded-[14px] p-6 text-center">
+          <p className="text-red-500 text-[14px]">{error}</p>
+          <button onClick={loadProducts} className="mt-3 text-[13px] text-[#7C9070] hover:underline">
             重新載入
           </button>
         </div>
       )}
 
       {!loading && !error && products.length === 0 && (
-        <div className="text-center py-24 text-gray-400">
+        <div className="text-center py-24 text-[#8E8E93]">
           <div className="text-5xl mb-4">🔍</div>
-          <p>找不到符合的商品</p>
+          <p className="text-[14px]">找不到符合的商品</p>
         </div>
       )}
 
       {!loading && !error && products.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              id={product.id}
-              slug={product.slug}
-              name={product.name}
-              price={product.price}
-              inStock={product.status === 'active' && (product.inventory?.quantity ?? 0) > 0}
-              categoryName={product.category?.name}
-              onAddToCart={handleAddToCart}
-            />
-          ))}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-5">
+          {products.map((product) => {
+            const href = `/products/${product.slug ?? product.id}`
+            const inStock = product.status === 'active' && (product.inventory?.quantity ?? 0) > 0
+            return (
+              <div key={product.id} className="bg-white rounded-[14px] md:rounded-[16px] border border-[#F0EFEC] overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                <Link href={href}>
+                  <div className="w-full h-[140px] md:h-[200px] overflow-hidden bg-[#F0EFEC]">
+                    {product.image ? (
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        width={400}
+                        height={200}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-4xl">🛍️</div>
+                    )}
+                  </div>
+                  <div className="p-3 md:p-4 flex flex-col gap-1 md:gap-2">
+                    {product.category && (
+                      <p className="font-jakarta text-[11px] text-[#8E8E93]">{product.category.name}</p>
+                    )}
+                    <h3 className="font-jakarta font-semibold text-[13px] md:text-[14px] text-[#2D2D2D] leading-tight line-clamp-2">
+                      {product.name}
+                    </h3>
+                    <p className="font-jakarta text-[14px] md:text-[16px] font-semibold text-[#7C9070]">
+                      NT$ {product.price.toLocaleString('zh-TW')}
+                    </p>
+                  </div>
+                </Link>
+                <div className="px-3 md:px-4 pb-3 md:pb-4 mt-auto">
+                  <button
+                    onClick={() => addToCart({ productId: product.id, productName: product.name, price: product.price, slug: product.slug ?? undefined })}
+                    disabled={!inStock}
+                    className="w-full bg-[#7C9070] hover:bg-[#6a7d5f] disabled:bg-[#E0DDD8] disabled:text-[#8E8E93] text-white text-[13px] md:text-[14px] font-semibold font-jakarta py-2 md:py-2.5 rounded-[10px] transition-colors"
+                  >
+                    {inStock ? '加入購物車' : '已售完'}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
-
-      <CartSummary items={cartItems} />
     </div>
   )
 }
+

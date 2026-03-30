@@ -26,6 +26,41 @@ function fail(e: unknown): NextResponse<ApiError> {
   )
 }
 
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const email = searchParams.get('email')
+    const status = searchParams.get('status') || undefined
+    const limit = Math.min(parseInt(searchParams.get('limit') ?? '20', 10), 100)
+    const offset = parseInt(searchParams.get('offset') ?? '0', 10)
+
+    const where = {
+      ...(status ? { status } : {}),
+      ...(email ? { customer: { email } } : {}),
+    }
+
+    const [orders, total] = await prisma.$transaction([
+      prisma.order.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+        include: {
+          customer: { select: { id: true, name: true, email: true } },
+          items: {
+            include: { product: { select: { id: true, name: true } } },
+          },
+        },
+      }),
+      prisma.order.count({ where }),
+    ])
+
+    return ok({ orders, total })
+  } catch (e) {
+    return fail(e)
+  }
+}
+
 const createOrderSchema = z.object({
   customerName: z.string().min(1),
   customerEmail: z.string().min(1),

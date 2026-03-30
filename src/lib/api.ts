@@ -1,42 +1,44 @@
-export interface ApiResponse<T> {
-  data: T | null
-  error: { code: string; message: string } | null
+import { mockFetchProducts, mockFetchProduct, mockCreateOrder, mockFetchCategoryBySlug } from './mock-handlers'
+import type { MockCategoryData, MockCategoryProduct, ProductWithMeta } from './mock-handlers'
+import type {
+  ApiResponse,
+  Product,
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Promotion,
+  PromotionChannel,
+  PromotionStatus,
+  CreateOrderInput,
+  CartItem,
+} from '../types'
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
+
+// 重新 export，讓現有頁面元件仍可從 api.ts import，無需改動所有頁面
+export type {
+  ApiResponse,
+  Product,
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Promotion,
+  PromotionChannel,
+  PromotionStatus,
+  CreateOrderInput,
+  CartItem,
 }
 
-export interface Product {
-  id: string
-  slug?: string | null
-  name: string
-  description: string | null
-  price: number
-  status: string
-  categoryId: string
-  category?: { id: string; name: string; slug: string }
-  inventory?: { sku: string; quantity: number }
-}
-
-export interface OrderItem {
-  productId: string
-  quantity: number
-}
-
-export interface CreateOrderInput {
-  customerName: string
-  customerEmail: string
-  customerPhone?: string
-  customerAddress: string
-  paymentMethod: 'bank_transfer' | 'seller_ship'
-  note?: string
-  items: OrderItem[]
-}
-
-export interface Order {
-  id: string
-  status: string
-  paymentMethod: string
-  totalAmount: number
-  note: string | null
-  createdAt: string
+// 局部使用：create promotion 的輸入（僅 api.ts 內部邏輯需要）
+interface CreatePromotionInput {
+  channel: PromotionChannel
+  productIds: string[]
+  message: string
+  utmUrl?: string
+  status?: PromotionStatus
+  metadata?: Record<string, unknown>
 }
 
 export async function fetchProducts(params?: {
@@ -44,6 +46,7 @@ export async function fetchProducts(params?: {
   q?: string
   status?: string
 }): Promise<ApiResponse<Product[]>> {
+  if (USE_MOCK) return mockFetchProducts(params)
   const query = new URLSearchParams()
   if (params?.categoryId) query.set('categoryId', params.categoryId)
   if (params?.q) query.set('q', params.q)
@@ -54,14 +57,16 @@ export async function fetchProducts(params?: {
   return res.json() as Promise<ApiResponse<Product[]>>
 }
 
-export async function fetchProduct(id: string): Promise<ApiResponse<Product>> {
+export async function fetchProduct(id: string): Promise<ApiResponse<ProductWithMeta>> {
+  if (USE_MOCK) return mockFetchProduct(id)
   const res = await fetch(`/api/v1/products/${id}`)
-  return res.json() as Promise<ApiResponse<Product>>
+  return res.json() as Promise<ApiResponse<ProductWithMeta>>
 }
 
 export async function createOrder(
   input: CreateOrderInput,
 ): Promise<ApiResponse<Order>> {
+  if (USE_MOCK) return mockCreateOrder(input)
   const res = await fetch('/api/v1/orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -70,31 +75,16 @@ export async function createOrder(
   return res.json() as Promise<ApiResponse<Order>>
 }
 
+export type { MockCategoryData, MockCategoryProduct }
+export type { ProductWithMeta }
+
+export async function fetchCategoryBySlug(slug: string): Promise<ApiResponse<MockCategoryData>> {
+  if (USE_MOCK) return mockFetchCategoryBySlug(slug)
+  const res = await fetch(`/api/v1/categories/${slug}`)
+  return res.json() as Promise<ApiResponse<MockCategoryData>>
+}
+
 // --- Promotions ---
-
-export type PromotionChannel = 'LINE' | 'FB'
-export type PromotionStatus = 'draft' | 'sent' | 'scheduled' | 'failed'
-
-export interface Promotion {
-  id: string
-  channel: PromotionChannel
-  productIds: string[]
-  message: string
-  utmUrl: string | null
-  status: PromotionStatus
-  metadata: Record<string, unknown> | null
-  createdAt: string
-  updatedAt: string
-}
-
-export interface CreatePromotionInput {
-  channel: PromotionChannel
-  productIds: string[]
-  message: string
-  utmUrl?: string
-  status?: PromotionStatus
-  metadata?: Record<string, unknown>
-}
 
 export async function fetchPromotions(params?: {
   channel?: PromotionChannel

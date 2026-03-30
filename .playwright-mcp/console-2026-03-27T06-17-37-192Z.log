@@ -1,0 +1,6 @@
+[     416ms] [WARNING] Image with src "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=400&q=80" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading @ http://localhost:4847/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[     516ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4847/_next/image?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1556228720-da8e4615c99e%3Fw%3D400%26q%3D80&w=640&q=75:0
+[    4569ms] [WARNING] Image with src "https://images.unsplash.com/photo-1590301157890-4810ed352733?w=400&q=80" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading @ http://localhost:4847/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[    4692ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4847/_next/image?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1556228720-da8e4615c99e%3Fw%3D400%26q%3D80&w=640&q=75:0
