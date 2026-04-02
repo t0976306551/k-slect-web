@@ -28,6 +28,38 @@ export interface Inventory {
   updatedAt: string
 }
 
+// --- Product Variants ---
+export interface ProductOptionValue {
+  id: string
+  optionId: string
+  value: string
+  position: number
+}
+
+export interface ProductOption {
+  id: string
+  productId: string
+  name: string
+  position: number
+  values: ProductOptionValue[]
+}
+
+export interface ProductVariant {
+  id: string
+  productId: string
+  sku: string
+  price: number | null    // null = 沿用 Product.price
+  image: string | null
+  quantity: number
+  lowStockThreshold: number
+  status: string
+  variantOptions: Array<{
+    variantId: string
+    optionValueId: string
+    optionValue: ProductOptionValue
+  }>
+}
+
 // --- Product ---
 export interface Product {
   id: string
@@ -40,17 +72,25 @@ export interface Product {
   category?: Pick<Category, 'id' | 'name' | 'slug'>
   inventory?: Pick<Inventory, 'sku' | 'quantity' | 'lowStockThreshold'>
   images?: string[]       // 商品圖片 URL 陣列（未來 schema 擴充）
+  options?: ProductOption[]
+  variants?: ProductVariant[]
   createdAt: string
   updatedAt: string
 }
 
 // --- Customer ---
+export type CustomerStatus = 'active' | 'blacklisted' | 'vip'
+
 export interface Customer {
   id: string
   name: string
   email: string
   phone: string | null
   address: string | null
+  tags: string[]
+  note: string | null
+  status: CustomerStatus
+  _count?: { orders: number }
   createdAt: string
   updatedAt: string
 }
@@ -61,6 +101,8 @@ export interface OrderItem {
   orderId: string
   productId: string
   product?: Pick<Product, 'id' | 'name' | 'slug'>
+  variantId?: string | null
+  variantSnapshot?: Record<string, string> | null  // {"顏色":"紅色","尺寸":"M"}
   quantity: number
   priceAtOrder: number    // 下單當下價格快照（Prisma schema 欄位名）
   createdAt: string
@@ -69,8 +111,6 @@ export interface OrderItem {
 
 // --- Order ---
 export type OrderStatus =
-  | 'pending_payment'
-  | 'pending_confirm'
   | 'pending_ship'
   | 'shipped'
   | 'completed'
@@ -78,7 +118,7 @@ export type OrderStatus =
   | 'refund_pending'
   | 'refunded'
 
-export type PaymentMethod = 'bank_transfer' | 'seller_ship'
+export type PaymentMethod = 'seller_ship'
 export type PaymentStatus = 'pending' | 'paid' | 'failed'
 
 export interface Order {
@@ -122,7 +162,7 @@ export interface CreateOrderInput {
   customerAddress: string
   paymentMethod: PaymentMethod
   note?: string
-  items: Array<{ productId: string; quantity: number }>
+  items: Array<{ productId: string; quantity: number; variantId?: string }>
 }
 
 // --- Cart（前台專用）---
@@ -133,4 +173,6 @@ export interface CartItem {
   quantity: number
   readonly image?: string
   readonly slug?: string
+  readonly variantId?: string
+  readonly variantLabel?: string  // 顯示用，例如 "紅色 / M"
 }

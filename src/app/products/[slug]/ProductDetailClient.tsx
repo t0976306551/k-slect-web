@@ -4,10 +4,24 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronLeft, ShoppingBag, Check } from 'lucide-react'
+import { ChevronLeft, ShoppingBag, Check, Star } from 'lucide-react'
 import { addToCart } from '@/lib/cart'
 import { fetchProduct } from '@/lib/api'
 import type { ProductWithMeta } from '@/lib/api'
+import type { ProductVariant } from '@/types'
+
+function findVariant(
+  variants: ProductVariant[],
+  selectedValues: Record<string, string>, // { optionId: valueId }
+): ProductVariant | undefined {
+  const entries = Object.entries(selectedValues)
+  if (entries.length === 0) return undefined
+  return variants.find((v) =>
+    entries.every(([, valueId]) =>
+      v.variantOptions.some((vo) => vo.optionValueId === valueId)
+    )
+  )
+}
 
 export default function ProductDetailClient() {
   const params = useParams<{ slug: string }>()
@@ -17,6 +31,8 @@ export default function ProductDetailClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [added, setAdded] = useState(false)
+  // { optionId: valueId }
+  const [selectedValues, setSelectedValues] = useState<Record<string, string>>({})
 
   useEffect(() => {
     async function load() {
@@ -28,6 +44,7 @@ export default function ProductDetailClient() {
           setError(res.error.message)
         } else {
           setProduct(res.data)
+          setSelectedValues({})
         }
       } catch {
         setError('載入商品失敗，請稍後再試')
@@ -38,14 +55,62 @@ export default function ProductDetailClient() {
     load()
   }, [id])
 
+  const hasVariants = (product?.variants?.length ?? 0) > 0
+  const selectedVariant = hasVariants && product?.variants
+    ? findVariant(product.variants, selectedValues)
+    : undefined
+
+  const allOptionsSelected = hasVariants
+    ? (product?.options?.length ?? 0) === Object.keys(selectedValues).length
+    : true
+
+  // 庫存判斷：有型號用 variant，否則用 inventory
+  const inStock = hasVariants
+    ? (selectedVariant?.quantity ?? 0) > 0
+    : (product?.inventory?.quantity ?? 0) > 0
+  const isActive = product?.status === 'active'
+
+  // 顯示價格：選中型號有獨立定價時顯示型號價
+  const displayPrice = selectedVariant?.price ?? product?.price ?? 0
+
+  function handleSelectValue(optionId: string, valueId: string) {
+    setSelectedValues((prev) => ({ ...prev, [optionId]: valueId }))
+  }
+
+  function isValueOutOfStock(optionId: string, valueId: string): boolean {
+    if (!product?.variants) return false
+    const tentative = { ...selectedValues, [optionId]: valueId }
+    const entries = Object.entries(tentative)
+    const matched = product.variants.filter((v) =>
+      entries.every(([, vid]) =>
+        v.variantOptions.some((vo) => vo.optionValueId === vid)
+      )
+    )
+    return matched.length > 0 && matched.every((v) => v.quantity === 0)
+  }
+
   function handleAddToCart() {
     if (!product) return
+    if (hasVariants && !selectedVariant) return
+
+    const variantLabel = selectedVariant
+      ? product.options
+          ?.map((opt) => {
+            const valueId = selectedValues[opt.id]
+            return opt.values.find((v) => v.id === valueId)?.value ?? ''
+          })
+          .filter(Boolean)
+          .join(' / ')
+      : undefined
+
     addToCart({
       productId: product.id,
       productName: product.name,
-      price: product.price,
-      image: product.image,
+      price: displayPrice,
+      image: selectedVariant?.image ?? product.image,
       slug: product.slug ?? undefined,
+      variantId: selectedVariant?.id,
+      variantLabel,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
@@ -74,8 +139,7 @@ export default function ProductDetailClient() {
     )
   }
 
-  const inStock = (product.inventory?.quantity ?? 0) > 0
-  const isActive = product.status === 'active'
+  const displayImage = selectedVariant?.image ?? product.image
 
   return (
     <div className="max-w-[1440px] mx-auto">
@@ -99,16 +163,16 @@ export default function ProductDetailClient() {
       <div className="md:px-12 md:pb-12 grid grid-cols-1 md:grid-cols-2 md:gap-10">
         {/* Product image */}
         <div className="w-full md:aspect-square md:rounded-[16px] overflow-hidden bg-[#F0EFEC]">
-          {product.image ? (
+          {displayImage ? (
             <Image
-              src={product.image}
+              src={displayImage}
               alt={product.name}
               width={600}
               height={600}
               className="w-full h-[280px] md:h-full object-cover"
             />
           ) : (
-            <div className="w-full h-[280px] md:h-full flex items-center justify-center text-8xl">🛍️</div>
+            <div className="w-full h-[280px] md:h-full flex items-center justify-center"><ShoppingBag size={80} className="text-[#C8C8C8]" /></div>
           )}
         </div>
 
@@ -123,7 +187,7 @@ export default function ProductDetailClient() {
 
           <div className="flex items-baseline gap-3">
             <p className="font-jakarta text-[24px] md:text-[30px] font-bold text-[#7C9070]">
-              NT$ {product.price.toLocaleString('zh-TW')}
+              NT$ {displayPrice.toLocaleString('zh-TW')}
             </p>
             {product.originalPrice && (
               <p className="font-jakarta text-[15px] text-[#8E8E93] line-through">
@@ -134,15 +198,67 @@ export default function ProductDetailClient() {
 
           {product.rating && (
             <p className="text-[13px] text-[#8E8E93]">
-              ⭐ {product.rating} · 已售 {product.soldCount?.toLocaleString('zh-TW')} 件
+              <Star size={13} className="inline text-[#FFAB30] fill-[#FFAB30] mr-0.5 align-middle" /> {product.rating} · 已售 {product.soldCount?.toLocaleString('zh-TW')} 件
             </p>
           )}
 
-          {product.inventory && (
+          {/* 型號選擇器（有 variants 才顯示） */}
+          {hasVariants && product.options && product.options.length > 0 && (
+            <div className="flex flex-col gap-3 border-t border-[#F0EFEC] pt-3">
+              {product.options.map((option) => (
+                <div key={option.id}>
+                  <p className="text-[12px] font-semibold text-[#8E8E93] mb-2 uppercase tracking-wide">
+                    {option.name}
+                    {selectedValues[option.id] && (
+                      <span className="ml-2 text-[#2D2D2D] normal-case font-normal">
+                        {option.values.find((v) => v.id === selectedValues[option.id])?.value}
+                      </span>
+                    )}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {option.values.map((val) => {
+                      const isSelected = selectedValues[option.id] === val.id
+                      const outOfStock = isValueOutOfStock(option.id, val.id)
+                      return (
+                        <button
+                          key={val.id}
+                          onClick={() => handleSelectValue(option.id, val.id)}
+                          disabled={outOfStock}
+                          className={[
+                            'px-3 py-1.5 rounded-[8px] text-[13px] border transition-colors',
+                            isSelected
+                              ? 'border-[#7C9070] bg-[#EBF1E8] text-[#7C9070] font-semibold'
+                              : outOfStock
+                              ? 'border-[#E8E8E8] text-[#C0C0C0] line-through cursor-not-allowed'
+                              : 'border-[#E8E8E8] text-[#2D2D2D] hover:border-[#7C9070]',
+                          ].join(' ')}
+                        >
+                          {val.value}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 無型號商品庫存顯示 */}
+          {!hasVariants && product.inventory && (
             <p className="text-[13px] text-[#8E8E93]">
               庫存：
               <span className={inStock ? 'text-[#7C9070] font-semibold' : 'text-[#D4845E] font-semibold'}>
                 {inStock ? `${product.inventory.quantity} 件` : '已售完'}
+              </span>
+            </p>
+          )}
+
+          {/* 選中型號庫存顯示 */}
+          {hasVariants && selectedVariant && (
+            <p className="text-[13px] text-[#8E8E93]">
+              庫存：
+              <span className={inStock ? 'text-[#7C9070] font-semibold' : 'text-[#D4845E] font-semibold'}>
+                {inStock ? `${selectedVariant.quantity} 件` : '已售完'}
               </span>
             </p>
           )}
@@ -159,13 +275,15 @@ export default function ProductDetailClient() {
           {/* Add to cart button */}
           <button
             onClick={handleAddToCart}
-            disabled={!isActive || !inStock}
+            disabled={!isActive || (hasVariants ? (!allOptionsSelected || !inStock) : !inStock)}
             className="w-full flex items-center justify-center gap-2 bg-[#7C9070] hover:bg-[#6a7d5f] disabled:bg-[#E0DDD8] disabled:text-[#8E8E93] text-white font-jakarta font-semibold text-[15px] py-3.5 rounded-[10px] transition-colors mt-1"
           >
             {added ? (
               <><Check size={16} /> 已加入購物車</>
             ) : !isActive ? (
               '已下架'
+            ) : hasVariants && !allOptionsSelected ? (
+              '請選擇型號'
             ) : !inStock ? (
               '已售完'
             ) : (
@@ -184,4 +302,3 @@ export default function ProductDetailClient() {
     </div>
   )
 }
-

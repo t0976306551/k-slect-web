@@ -25,16 +25,16 @@ function fail(e: unknown): NextResponse<ApiError> {
   )
 }
 
-type RouteContext = { params: Promise<{ slug: string }> }
+type RouteContext = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
-    const { slug } = await params
+    const { id } = await params
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status') ?? 'active'
 
     const category = await prisma.category.findUnique({
-      where: { slug },
+      where: { id },
       include: {
         products: {
           where: { status },

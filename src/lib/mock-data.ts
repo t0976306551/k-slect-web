@@ -115,9 +115,9 @@ export const mockProducts: MockProduct[] = [
 ];
 
 export const mockCategories = [
-  { id: "beauty", name: "美妝保養", icon: "sparkles", color: "#7C9070" },
-  { id: "food", name: "食品零食", icon: "cookie", color: "#D4845E" },
-  { id: "fashion", name: "服飾配件", icon: "shirt", color: "#5B9BD5" },
-  { id: "hot", name: "熱銷推薦", icon: "flame", color: "#E25555" },
-  { id: "new", name: "新品上架", icon: "package", color: "#2D2D2D" },
+  { id: "clbeauty0001", slug: "beauty",  name: "美妝保養", icon: "sparkles", color: "#7C9070" },
+  { id: "clfood000002", slug: "food",    name: "食品零食", icon: "cookie",   color: "#D4845E" },
+  { id: "clfashion003", slug: "fashion", name: "服飾配件", icon: "shirt",    color: "#5B9BD5" },
+  { id: "clhot0000004", slug: "hot",     name: "熱銷推薦", icon: "flame",    color: "#E25555" },
+  { id: "clnew0000005", slug: "new",     name: "新品上架", icon: "package",  color: "#2D2D2D" },
 ];

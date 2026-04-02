@@ -16,14 +16,8 @@ export default function Navbar() {
             <Link href="/products" className="text-[13px] font-medium text-[#2D2D2D] font-jakarta hover:text-[#7C9070] transition-colors">
               全部商品
             </Link>
-            <Link href="/products?category=beauty" className="text-[13px] font-medium text-[#6B6B6B] font-jakarta hover:text-[#7C9070] transition-colors">
-              美妝保養
-            </Link>
-            <Link href="/products?category=food" className="text-[13px] font-medium text-[#6B6B6B] font-jakarta hover:text-[#7C9070] transition-colors">
-              食品零食
-            </Link>
-            <Link href="/products?category=fashion" className="text-[13px] font-medium text-[#6B6B6B] font-jakarta hover:text-[#7C9070] transition-colors">
-              服飾配件
+            <Link href="/categories" className="text-[13px] font-medium text-[#6B6B6B] font-jakarta hover:text-[#7C9070] transition-colors">
+              分類
             </Link>
           </div>
         </div>

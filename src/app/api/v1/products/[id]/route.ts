@@ -27,6 +27,27 @@ function fail(e: unknown): NextResponse<ApiError> {
   )
 }
 
+const optionValueInputSchema = z.object({
+  value: z.string().min(1),
+  position: z.number().int().min(0),
+})
+
+const optionInputSchema = z.object({
+  name: z.string().min(1),
+  position: z.number().int().min(0),
+  values: z.array(optionValueInputSchema).min(1),
+})
+
+const variantInputSchema = z.object({
+  sku: z.string().min(1),
+  price: z.number().int().positive().nullable().optional(),
+  quantity: z.number().int().min(0).default(0),
+  lowStockThreshold: z.number().int().min(0).default(5),
+  status: z.enum(['active', 'inactive']).default('active'),
+  image: z.string().nullable().optional(),
+  optionValues: z.array(z.string()),
+})
+
 const updateProductSchema = z.object({
   name: z.string().min(1).optional(),
   slug: z.string().min(1).optional(),
@@ -34,6 +55,8 @@ const updateProductSchema = z.object({
   price: z.number().int().positive().optional(),
   status: z.enum(['active', 'inactive']).optional(),
   categoryId: z.string().min(1).optional(),
+  options: z.array(optionInputSchema).optional(),
+  variants: z.array(variantInputSchema).optional(),
 })
 
 type RouteContext = { params: Promise<{ id: string }> }
@@ -48,6 +71,18 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       include: {
         category: { select: { id: true, name: true, slug: true } },
         inventory: true,
+        options: {
+          orderBy: { position: 'asc' },
+          include: { values: { orderBy: { position: 'asc' } } },
+        },
+        variants: {
+          where: { status: 'active' },
+          include: {
+            variantOptions: {
+              include: { optionValue: true },
+            },
+          },
+        },
       },
     })
 
@@ -70,9 +105,78 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     const existing = await prisma.product.findUnique({ where: { id } })
     if (!existing) throw new NotFoundError('商品')
 
+    const { options, variants, ...productData } = result.data
+
+    // 有 variants：全刪後重建策略
+    if (options?.length && variants?.length) {
+      const product = await prisma.$transaction(async tx => {
+        // 1. 更新商品基本欄位
+        await tx.product.update({ where: { id }, data: productData })
+
+        // 2. 刪除舊 options（cascade 到 values、variantOptions）+ 舊 variants
+        await tx.productVariant.deleteMany({ where: { productId: id } })
+        await tx.productOption.deleteMany({ where: { productId: id } })
+
+        // 3. 重建 options + values
+        const valueMap = new Map<string, string>()
+        for (const option of options) {
+          const o = await tx.productOption.create({
+            data: { productId: id, name: option.name, position: option.position },
+          })
+          for (const val of option.values) {
+            const v = await tx.productOptionValue.create({
+              data: { optionId: o.id, value: val.value, position: val.position },
+            })
+            valueMap.set(val.value, v.id)
+          }
+        }
+
+        // 4. 重建 variants + variantOptions
+        for (const variant of variants) {
+          const v = await tx.productVariant.create({
+            data: {
+              productId: id,
+              sku: variant.sku,
+              price: variant.price ?? null,
+              quantity: variant.quantity,
+              lowStockThreshold: variant.lowStockThreshold,
+              status: variant.status,
+              image: variant.image ?? null,
+            },
+          })
+          for (const valStr of variant.optionValues) {
+            const optionValueId = valueMap.get(valStr)
+            if (optionValueId) {
+              await tx.productVariantOption.create({
+                data: { variantId: v.id, optionValueId },
+              })
+            }
+          }
+        }
+
+        return tx.product.findUniqueOrThrow({
+          where: { id },
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+            inventory: true,
+            options: {
+              orderBy: { position: 'asc' },
+              include: { values: { orderBy: { position: 'asc' } } },
+            },
+            variants: {
+              include: { variantOptions: { include: { optionValue: true } } },
+            },
+          },
+        })
+      })
+
+      return ok(product)
+    }
+
+    // 無 variants：一般更新
     const product = await prisma.product.update({
       where: { id },
-      data: result.data,
+      data: productData,
       include: {
         category: { select: { id: true, name: true, slug: true } },
         inventory: true,

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Trash2 } from 'lucide-react'
+import { Trash2, ShoppingCart, ShoppingBag } from 'lucide-react'
 import { getCart, updateQuantity, removeFromCart, getCartTotal, getCartCount } from '@/lib/cart'
 import type { CartItem } from '@/lib/cart'
 
@@ -14,13 +14,13 @@ export default function CartClient() {
     setItems(getCart())
   }, [])
 
-  function handleQuantityChange(productId: string, quantity: number) {
-    const updated = updateQuantity(productId, quantity)
+  function handleQuantityChange(productId: string, quantity: number, variantId?: string) {
+    const updated = updateQuantity(productId, quantity, variantId)
     setItems(updated)
   }
 
-  function handleRemove(productId: string) {
-    const updated = removeFromCart(productId)
+  function handleRemove(productId: string, variantId?: string) {
+    const updated = removeFromCart(productId, variantId)
     setItems(updated)
   }
 
@@ -30,7 +30,7 @@ export default function CartClient() {
   if (items.length === 0) {
     return (
       <div className="text-center py-24 px-4">
-        <div className="text-6xl mb-4">🛒</div>
+        <ShoppingCart size={56} className="mx-auto mb-4 text-[#C8C8C8]" />
         <h2 className="font-jakarta text-[18px] font-semibold text-[#2D2D2D] mb-2">購物車是空的</h2>
         <p className="font-jakarta text-[13px] text-[#8E8E93] mb-6">快去挑選你喜歡的韓貨吧！</p>
         <Link
@@ -50,7 +50,7 @@ export default function CartClient() {
       <div className="space-y-2.5 md:space-y-3 mb-5">
         {items.map((item) => (
           <div
-            key={item.productId}
+            key={`${item.productId}::${item.variantId ?? ''}`}
             className="bg-white rounded-[14px] border border-[#F0EFEC] p-3.5 md:p-4 flex items-center gap-3"
           >
             {/* Image */}
@@ -64,7 +64,7 @@ export default function CartClient() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl">🛍️</div>
+                <div className="w-full h-full flex items-center justify-center"><ShoppingBag size={24} className="text-[#C8C8C8]" /></div>
               )}
             </div>
 
@@ -73,6 +73,9 @@ export default function CartClient() {
               <p className="font-jakarta font-medium text-[#2D2D2D] text-[13px] md:text-[14px] line-clamp-2 leading-tight">
                 {item.productName}
               </p>
+              {item.variantLabel && (
+                <p className="text-[11px] text-[#8E8E93] mt-0.5">{item.variantLabel}</p>
+              )}
               <p className="font-jakarta text-[#7C9070] font-semibold text-[13px] md:text-[14px] mt-1">
                 NT$ {item.price.toLocaleString('zh-TW')}
               </p>
@@ -81,14 +84,14 @@ export default function CartClient() {
             {/* Qty controls */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
-                onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}
+                onClick={() => handleQuantityChange(item.productId, item.quantity - 1, item.variantId)}
                 className="w-7 h-7 rounded-full border border-[#E8E8E8] flex items-center justify-center text-[#2D2D2D] hover:border-[#7C9070] transition-colors text-[16px] leading-none"
               >
                 −
               </button>
               <span className="w-5 text-center text-[13px] font-semibold text-[#2D2D2D]">{item.quantity}</span>
               <button
-                onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
+                onClick={() => handleQuantityChange(item.productId, item.quantity + 1, item.variantId)}
                 className="w-7 h-7 rounded-full border border-[#E8E8E8] flex items-center justify-center text-[#2D2D2D] hover:border-[#7C9070] transition-colors text-[16px] leading-none"
               >
                 +
@@ -101,7 +104,7 @@ export default function CartClient() {
                 NT$ {(item.price * item.quantity).toLocaleString('zh-TW')}
               </p>
               <button
-                onClick={() => handleRemove(item.productId)}
+                onClick={() => handleRemove(item.productId, item.variantId)}
                 className="text-[#C0C0C0] hover:text-[#D4845E] transition-colors"
               >
                 <Trash2 size={14} />

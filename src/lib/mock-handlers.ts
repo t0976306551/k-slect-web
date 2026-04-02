@@ -75,8 +75,8 @@ export async function mockCreateOrder(input: {
   const order: Order = {
     id: `ORD-${Date.now()}`,
     customerId: 'mock-customer',
-    status: 'pending_payment',
-    paymentMethod: (input.paymentMethod as Order['paymentMethod']) ?? 'bank_transfer',
+    status: 'pending_ship',
+    paymentMethod: 'seller_ship',
     paymentStatus: 'pending',
     totalAmount,
     note: null,
@@ -84,6 +84,23 @@ export async function mockCreateOrder(input: {
     updatedAt: now,
   }
   return { data: order, error: null }
+}
+
+export interface MockCategory {
+  id: string
+  slug: string
+  name: string
+  icon: string
+  color: string
+  productCount: number
+}
+
+export function mockFetchCategories(): ApiResponse<MockCategory[]> {
+  const data = mockCategories.map((c) => ({
+    ...c,
+    productCount: mockProducts.filter((p) => p.category === c.slug).length,
+  }))
+  return { data, error: null }
 }
 
 export interface MockCategoryProduct {
@@ -103,36 +120,23 @@ export interface MockCategoryData {
   products: MockCategoryProduct[]
 }
 
-export async function mockFetchCategoryBySlug(
-  slug: string,
+export async function mockFetchCategoryById(
+  id: string,
 ): Promise<ApiResponse<MockCategoryData>> {
-  // 'hot' 和 'new' 是虛擬分類，用銷量與上架時間篩選
-  let catId = slug
-  let catName = slug
-
-  const found = mockCategories.find((c) => c.id === slug)
-  if (!found && slug !== 'hot' && slug !== 'new') {
+  const found = mockCategories.find((c) => c.id === id)
+  if (!found) {
     return { data: null, error: { code: 'NOT_FOUND', message: '分類不存在' } }
   }
-  if (found) catName = found.name
 
-  let filteredProducts = mockProducts.map(toProductWithMeta)
-
-  if (slug === 'hot') {
-    catName = '熱銷推薦'
-    filteredProducts = [...filteredProducts].sort((a, b) => b.soldCount - a.soldCount)
-  } else if (slug === 'new') {
-    catName = '新品上架'
-    filteredProducts = [...filteredProducts].slice().reverse()
-  } else {
-    filteredProducts = filteredProducts.filter((p) => p.categoryId === catId)
-  }
+  const filteredProducts = mockProducts
+    .map(toProductWithMeta)
+    .filter((p) => p.categoryId === found.slug)
 
   return {
     data: {
-      id: catId,
-      name: catName,
-      slug,
+      id,
+      name: found.name,
+      slug: found.slug,
       products: filteredProducts.map((p) => ({
         id: p.id,
         name: p.name,

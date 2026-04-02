@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { MessageCircle, Copy } from 'lucide-react'
 import { generateLineMessage, addPromotion } from '@/lib/promotions'
 import type { Product } from '@/lib/api'
 
@@ -57,7 +58,7 @@ export default function LineShareModal({ products, onClose }: LineShareModalProp
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <span className="text-xl">💬</span>
+            <MessageCircle size={20} className="text-green-500" />
             <h2 className="font-semibold text-gray-800">LINE 推廣訊息</h2>
           </div>
           <button
@@ -124,7 +125,7 @@ export default function LineShareModal({ products, onClose }: LineShareModalProp
               </>
             ) : (
               <>
-                <span>📋</span>
+                <Copy size={16} />
                 <span>一鍵複製訊息</span>
               </>
             )}

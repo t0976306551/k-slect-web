@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ShoppingCart } from 'lucide-react'
 import { getCartTotal, getCartCount } from '@/lib/cart'
 import type { CartItem } from '@/lib/cart'
 
@@ -22,7 +23,7 @@ export default function CartSummary({ items }: CartSummaryProps) {
         href="/cart"
         className="flex items-center gap-3 bg-purple-600 text-white px-5 py-3 rounded-full shadow-lg hover:bg-purple-700 transition-colors"
       >
-        <span className="text-xl">🛒</span>
+        <ShoppingCart size={20} />
         <span className="font-medium text-sm">
           {count} 件
         </span>

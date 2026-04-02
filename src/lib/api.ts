@@ -1,5 +1,5 @@
-import { mockFetchProducts, mockFetchProduct, mockCreateOrder, mockFetchCategoryBySlug } from './mock-handlers'
-import type { MockCategoryData, MockCategoryProduct, ProductWithMeta } from './mock-handlers'
+import { mockFetchProducts, mockFetchProduct, mockCreateOrder, mockFetchCategoryById, mockFetchCategories } from './mock-handlers'
+import type { MockCategoryData, MockCategoryProduct, ProductWithMeta, MockCategory } from './mock-handlers'
 import type {
   ApiResponse,
   Product,
@@ -75,12 +75,18 @@ export async function createOrder(
   return res.json() as Promise<ApiResponse<Order>>
 }
 
-export type { MockCategoryData, MockCategoryProduct }
+export type { MockCategoryData, MockCategoryProduct, MockCategory }
 export type { ProductWithMeta }
 
-export async function fetchCategoryBySlug(slug: string): Promise<ApiResponse<MockCategoryData>> {
-  if (USE_MOCK) return mockFetchCategoryBySlug(slug)
-  const res = await fetch(`/api/v1/categories/${slug}`)
+export async function fetchCategories(): Promise<ApiResponse<MockCategory[]>> {
+  if (USE_MOCK) return mockFetchCategories()
+  const res = await fetch('/api/v1/categories')
+  return res.json() as Promise<ApiResponse<MockCategory[]>>
+}
+
+export async function fetchCategoryById(id: string): Promise<ApiResponse<MockCategoryData>> {
+  if (USE_MOCK) return mockFetchCategoryById(id)
+  const res = await fetch(`/api/v1/categories/${id}`)
   return res.json() as Promise<ApiResponse<MockCategoryData>>
 }
 

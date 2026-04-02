@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Search, X } from 'lucide-react'
+import { Search, X, ShoppingBag } from 'lucide-react'
 import { addToCart } from '@/lib/cart'
 import { fetchProducts } from '@/lib/api'
 import type { ProductWithMeta } from '@/lib/api'
@@ -70,7 +70,7 @@ export default function SearchPage() {
       {/* No results */}
       {!loading && searched && products.length === 0 && (
         <div className="text-center py-16">
-          <div className="text-5xl mb-3">🔍</div>
+          <Search size={48} className="mx-auto mb-3 text-[#8E8E93]" />
           <p className="font-jakarta text-[14px] text-[#8E8E93]">找不到「{query}」相關商品</p>
         </div>
       )}
@@ -78,7 +78,7 @@ export default function SearchPage() {
       {/* Empty state */}
       {!loading && !searched && (
         <div className="text-center py-16">
-          <div className="text-5xl mb-3">🛍️</div>
+          <ShoppingBag size={48} className="mx-auto mb-3 text-[#8E8E93]" />
           <p className="font-jakarta text-[14px] text-[#8E8E93]">輸入關鍵字搜尋商品</p>
         </div>
       )}
@@ -104,7 +104,7 @@ export default function SearchPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-4xl">🛍️</div>
+                        <div className="w-full h-full flex items-center justify-center"><ShoppingBag size={40} className="text-[#C8C8C8]" /></div>
                       )}
                     </div>
                     <div className="p-3 flex flex-col gap-1">

@@ -7,14 +7,11 @@ import { getCart, getCartTotal, clearCart } from '@/lib/cart'
 import { createOrder } from '@/lib/api'
 import type { CartItem } from '@/lib/cart'
 
-type PaymentMethod = 'bank_transfer' | 'seller_ship'
-
 interface FormState {
   customerName: string
   customerEmail: string
   customerPhone: string
   customerAddress: string
-  paymentMethod: PaymentMethod
   note: string
 }
 
@@ -23,7 +20,6 @@ const INITIAL_FORM: FormState = {
   customerEmail: '',
   customerPhone: '',
   customerAddress: '',
-  paymentMethod: 'bank_transfer',
   note: '',
 }
 
@@ -67,7 +63,7 @@ export default function CheckoutClient() {
         customerEmail: form.customerEmail,
         customerPhone: form.customerPhone || undefined,
         customerAddress: form.customerAddress,
-        paymentMethod: form.paymentMethod,
+        paymentMethod: 'seller_ship',
         note: form.note || undefined,
         items: cartItems.map((item) => ({
           productId: item.productId,
@@ -131,30 +127,15 @@ export default function CheckoutClient() {
           </div>
 
           {/* Payment method */}
-          <div className="bg-white rounded-[14px] border border-[#F0EFEC] p-4 md:p-5 space-y-3">
-            <h2 className="font-jakarta font-semibold text-[#2D2D2D] text-[14px]">付款方式</h2>
-
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="radio" name="paymentMethod" value="bank_transfer"
-                checked={form.paymentMethod === 'bank_transfer'}
-                onChange={() => handleChange('paymentMethod', 'bank_transfer')}
-                className="mt-0.5 accent-[#7C9070]" />
-              <div>
-                <span className="font-jakarta font-medium text-[14px] text-[#2D2D2D]">銀行轉帳</span>
-                <p className="text-[12px] text-[#9E9E9E] mt-0.5">下單後 24 小時內完成匯款</p>
-              </div>
-            </label>
-
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="radio" name="paymentMethod" value="seller_ship"
-                checked={form.paymentMethod === 'seller_ship'}
-                onChange={() => handleChange('paymentMethod', 'seller_ship')}
-                className="mt-0.5 accent-[#7C9070]" />
+          <div className="bg-white rounded-[14px] border border-[#F0EFEC] p-4 md:p-5">
+            <h2 className="font-jakarta font-semibold text-[#2D2D2D] text-[14px] mb-3">付款方式</h2>
+            <div className="flex items-start gap-3 rounded-[10px] p-3" style={{ background: '#F7F6F3' }}>
+              <span className="text-[18px]">🏪</span>
               <div>
                 <span className="font-jakarta font-medium text-[14px] text-[#2D2D2D]">賣貨便取貨付款</span>
-                <p className="text-[12px] text-[#9E9E9E] mt-0.5">超商取貨，到貨後付款</p>
+                <p className="text-[12px] text-[#9E9E9E] mt-0.5">7-11 超商取貨，到貨後付款</p>
               </div>
-            </label>
+            </div>
           </div>
 
           {/* Note */}

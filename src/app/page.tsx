@@ -5,13 +5,14 @@ import {
   Sparkles,
   Cookie,
   Shirt,
-  Flame,
   Package,
   Leaf,
   MessageCircle,
   ArrowRight,
+  ShoppingBag,
+  type LucideIcon,
 } from 'lucide-react'
-import { fetchProducts } from '@/lib/api'
+import { fetchProducts, fetchCategories } from '@/lib/api'
 import type { ProductWithMeta } from '@/lib/mock-handlers'
 
 export const dynamic = 'force-dynamic'
@@ -21,18 +22,21 @@ export const metadata: Metadata = {
   description: '從首爾到台灣，美妝、零食、服飾一站購足。加入 LINE 好友，搶先收到新品與獨家優惠。',
 }
 
-const categories = [
-  { name: '美妝保養', slug: 'beauty', icon: Sparkles },
-  { name: '食品零食', slug: 'food', icon: Cookie },
-  { name: '服飾配件', slug: 'fashion', icon: Shirt },
-  { name: '保健大品', slug: 'health', icon: Leaf },
-  { name: '熱銷推薦', slug: 'hot', icon: Flame },
-]
+const iconMap: Record<string, LucideIcon> = {
+  sparkles: Sparkles,
+  cookie: Cookie,
+  shirt: Shirt,
+  leaf: Leaf,
+}
 
 export default async function HomePage() {
-  const res = await fetchProducts({ status: 'active' })
-  const allProducts = (res.data ?? []) as ProductWithMeta[]
+  const [productsRes, categoriesRes] = await Promise.all([
+    fetchProducts({ status: 'active' }),
+    fetchCategories(),
+  ])
+  const allProducts = (productsRes.data ?? []) as ProductWithMeta[]
   const hotProducts = allProducts.slice(0, 4)
+  const categories = categoriesRes.data ?? []
   return (
     <div className="bg-[#F7F6F3]">
       {/* Hero — Desktop: white bg + big image, Mobile: sage bg + small side image */}
@@ -95,11 +99,11 @@ export default async function HomePage() {
       {/* Mobile categories */}
       <section className="md:hidden bg-white border-b border-[#F0EFEC] px-4 py-3 flex items-center gap-2">
         {categories.map((cat) => {
-          const Icon = cat.icon
+          const Icon = (cat.icon ? iconMap[cat.icon] : null) ?? Package
           return (
             <Link
-              key={cat.slug}
-              href={`/products?category=${cat.slug}`}
+              key={cat.id}
+              href={`/category/${cat.id}`}
               className="flex-1 flex flex-col items-center gap-[5px]"
             >
               <div className="w-11 h-11 rounded-[12px] bg-[#7C907025] flex items-center justify-center">
@@ -115,11 +119,11 @@ export default async function HomePage() {
       {/* Desktop categories */}
       <section className="hidden md:flex max-w-[1440px] mx-auto px-12 py-8 gap-5 justify-center">
         {categories.map((cat) => {
-          const Icon = cat.icon
+          const Icon = (cat.icon ? iconMap[cat.icon] : null) ?? Package
           return (
             <Link
-              key={cat.slug}
-              href={`/products?category=${cat.slug}`}
+              key={cat.id}
+              href={`/category/${cat.id}`}
               className="w-[160px] h-[100px] bg-white rounded-[16px] border border-[#F0EFEC] flex flex-col items-center justify-center gap-2 hover:shadow-md transition-shadow flex-shrink-0"
             >
               <Icon size={28} className="text-[#7C9070]" strokeWidth={1.75} />
@@ -162,7 +166,7 @@ export default async function HomePage() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl md:text-6xl">🛍️</div>
+                  <div className="w-full h-full flex items-center justify-center"><ShoppingBag size={48} className="text-[#C8C8C8]" /></div>
                 )}
               </div>
               <div className="p-2.5 md:p-4 flex flex-col gap-1 md:gap-2">

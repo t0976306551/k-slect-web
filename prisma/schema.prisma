@@ -19,18 +19,20 @@ model Category {
 }
 
 model Product {
-  id          String     @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
-  slug        String?    @unique // kebab-case，SEO URL 用
+  slug        String?          @unique // kebab-case，SEO URL 用
   description String?
-  price       Int        // 台幣元，避免浮點數誤差
-  status      String     @default("active") // active | inactive
+  price       Int              // 台幣元，避免浮點數誤差
+  status      String           @default("active") // active | inactive
   categoryId  String
-  category    Category   @relation(fields: [categoryId], references: [id])
+  category    Category         @relation(fields: [categoryId], references: [id])
   inventory   Inventory?
   orderItems  OrderItem[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  options     ProductOption[]
+  variants    ProductVariant[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model Inventory {
@@ -50,6 +52,9 @@ model Customer {
   email     String   @unique
   phone     String?
   address   String?
+  tags      String[] @default([])
+  note      String?
+  status    String   @default("active") // active | blacklisted | vip
   orders    Order[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -69,15 +74,72 @@ model Order {
 }
 
 model OrderItem {
-  id           String   @id @default(cuid())
-  orderId      String
-  order        Order    @relation(fields: [orderId], references: [id])
-  productId    String
-  product      Product  @relation(fields: [productId], references: [id])
-  quantity     Int
-  priceAtOrder Int      // 下單當下價格快照
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String          @id @default(cuid())
+  orderId         String
+  order           Order           @relation(fields: [orderId], references: [id])
+  productId       String
+  product         Product         @relation(fields: [productId], references: [id])
+  variantId       String?
+  variant         ProductVariant? @relation(fields: [variantId], references: [id])
+  variantSnapshot Json?           // {"顏色":"紅色","尺寸":"M"}
+  quantity        Int
+  priceAtOrder    Int             // 下單當下價格快照
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model ProductOption {
+  id        String               @id @default(cuid())
+  productId String
+  product   Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String               // "顏色" | "尺寸"
+  position  Int                  @default(0)
+  values    ProductOptionValue[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([productId])
+}
+
+model ProductOptionValue {
+  id             String                 @id @default(cuid())
+  optionId       String
+  option         ProductOption          @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  value          String                 // "紅" | "S"
+  position       Int                    @default(0)
+  variantOptions ProductVariantOption[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([optionId])
+}
+
+model ProductVariant {
+  id                String                 @id @default(cuid())
+  productId         String
+  product           Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku               String                 @unique
+  price             Int?                   // null = 沿用 Product.price
+  image             String?
+  quantity          Int                    @default(0)
+  lowStockThreshold Int                    @default(5)
+  status            String                 @default("active")
+  variantOptions    ProductVariantOption[]
+  orderItems        OrderItem[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@index([productId])
+}
+
+model ProductVariantOption {
+  variantId     String
+  optionValueId String
+  variant       ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue   ProductOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, optionValueId])
+  @@index([optionValueId])
 }
 
 model Promotion {

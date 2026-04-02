@@ -66,13 +66,14 @@ const createOrderSchema = z.object({
   customerEmail: z.string().min(1),
   customerPhone: z.string().optional(),
   customerAddress: z.string().min(1),
-  paymentMethod: z.enum(['bank_transfer', 'seller_ship']),
+  paymentMethod: z.enum(['seller_ship']),
   note: z.string().optional(),
   items: z
     .array(
       z.object({
         productId: z.string().min(1),
         quantity: z.number().int().positive(),
+        variantId: z.string().min(1).optional(),
       }),
     )
     .min(1),
@@ -112,12 +113,21 @@ export async function POST(req: NextRequest) {
 
       // 驗證商品存在並計算總額，同時扣庫存
       let totalAmount = 0
-      const orderItemsData: { productId: string; quantity: number; priceAtOrder: number }[] = []
+      const orderItemsData: {
+        productId: string
+        quantity: number
+        priceAtOrder: number
+        variantId?: string
+        variantSnapshot?: Record<string, string>
+      }[] = []
 
       for (const item of items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
-          include: { inventory: true },
+          include: {
+            inventory: true,
+            variants: { select: { id: true } },
+          },
         })
 
         if (!product) throw new NotFoundError(`商品 ${item.productId}`)
@@ -125,23 +135,74 @@ export async function POST(req: NextRequest) {
           throw new AppError(`商品 ${item.productId} 已下架`, 'PRODUCT_INACTIVE', 422)
         }
 
-        const inventory = product.inventory
-        if (!inventory || inventory.quantity < item.quantity) {
-          throw new InsufficientStockError(item.productId)
+        const hasVariants = product.variants.length > 0
+
+        if (hasVariants && !item.variantId) {
+          throw new ValidationError(`商品 ${item.productId} 需要選擇型號`)
         }
 
-        // 扣庫存
-        await tx.inventory.update({
-          where: { productId: item.productId },
-          data: { quantity: { decrement: item.quantity } },
-        })
+        if (item.variantId) {
+          // 新路徑：透過 ProductVariant 扣庫存
+          const variant = await tx.productVariant.findUnique({
+            where: { id: item.variantId },
+            include: {
+              variantOptions: {
+                include: {
+                  optionValue: { include: { option: true } },
+                },
+              },
+            },
+          })
 
-        totalAmount += product.price * item.quantity
-        orderItemsData.push({
-          productId: item.productId,
-          quantity: item.quantity,
-          priceAtOrder: product.price,
-        })
+          if (!variant || variant.productId !== item.productId) {
+            throw new NotFoundError(`型號 ${item.variantId}`)
+          }
+          if (variant.status !== 'active') {
+            throw new AppError(`型號 ${item.variantId} 已下架`, 'VARIANT_INACTIVE', 422)
+          }
+          if (variant.quantity < item.quantity) {
+            throw new InsufficientStockError(item.variantId)
+          }
+
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { quantity: { decrement: item.quantity } },
+          })
+
+          // 建立型號快照
+          const variantSnapshot: Record<string, string> = {}
+          for (const vo of variant.variantOptions) {
+            variantSnapshot[vo.optionValue.option.name] = vo.optionValue.value
+          }
+
+          const priceAtOrder = variant.price ?? product.price
+          totalAmount += priceAtOrder * item.quantity
+          orderItemsData.push({
+            productId: item.productId,
+            quantity: item.quantity,
+            priceAtOrder,
+            variantId: item.variantId,
+            variantSnapshot,
+          })
+        } else {
+          // 舊路徑：透過 Inventory 扣庫存
+          const inventory = product.inventory
+          if (!inventory || inventory.quantity < item.quantity) {
+            throw new InsufficientStockError(item.productId)
+          }
+
+          await tx.inventory.update({
+            where: { productId: item.productId },
+            data: { quantity: { decrement: item.quantity } },
+          })
+
+          totalAmount += product.price * item.quantity
+          orderItemsData.push({
+            productId: item.productId,
+            quantity: item.quantity,
+            priceAtOrder: product.price,
+          })
+        }
       }
 
       // 建立訂單

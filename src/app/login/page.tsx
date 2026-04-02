@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, Zap } from "lucide-react";
 
 type Tab = "login" | "register";
 
@@ -178,7 +178,7 @@ function LoginForm() {
               }}
               className="w-full flex items-center justify-center gap-1.5 mb-4 border border-dashed border-[#C8D4C2] text-[13px] text-[#7C9070] py-2.5 rounded-[10px] hover:bg-[#F0F4EE] transition-colors"
             >
-              <span className="text-[15px]">⚡</span>
+              <Zap size={15} />
               使用測試帳號快速填入
             </button>
           )}

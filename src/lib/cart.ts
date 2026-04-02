@@ -5,9 +5,15 @@ export interface CartItem {
   quantity: number
   readonly image?: string
   readonly slug?: string
+  readonly variantId?: string
+  readonly variantLabel?: string  // 顯示用，例如 "紅色 / M"
 }
 
 const CART_KEY = 'k_slect_cart'
+
+function cartItemKey(productId: string, variantId?: string): string {
+  return variantId ? `${productId}::${variantId}` : productId
+}
 
 export function getCart(): CartItem[] {
   if (typeof window === 'undefined') return []
@@ -26,10 +32,11 @@ export function saveCart(items: CartItem[]): void {
 
 export function addToCart(item: Omit<CartItem, 'quantity'>): CartItem[] {
   const cart = getCart()
-  const existing = cart.find((i) => i.productId === item.productId)
+  const key = cartItemKey(item.productId, item.variantId)
+  const existing = cart.find((i) => cartItemKey(i.productId, i.variantId) === key)
   if (existing) {
     const updated = cart.map((i) =>
-      i.productId === item.productId ? { ...i, quantity: i.quantity + 1 } : i
+      cartItemKey(i.productId, i.variantId) === key ? { ...i, quantity: i.quantity + 1 } : i
     )
     saveCart(updated)
     return updated
@@ -39,21 +46,23 @@ export function addToCart(item: Omit<CartItem, 'quantity'>): CartItem[] {
   return updated
 }
 
-export function updateQuantity(productId: string, quantity: number): CartItem[] {
+export function updateQuantity(productId: string, quantity: number, variantId?: string): CartItem[] {
   const cart = getCart()
   if (quantity <= 0) {
-    return removeFromCart(productId)
+    return removeFromCart(productId, variantId)
   }
+  const key = cartItemKey(productId, variantId)
   const updated = cart.map((i) =>
-    i.productId === productId ? { ...i, quantity } : i
+    cartItemKey(i.productId, i.variantId) === key ? { ...i, quantity } : i
   )
   saveCart(updated)
   return updated
 }
 
-export function removeFromCart(productId: string): CartItem[] {
+export function removeFromCart(productId: string, variantId?: string): CartItem[] {
   const cart = getCart()
-  const updated = cart.filter((i) => i.productId !== productId)
+  const key = cartItemKey(productId, variantId)
+  const updated = cart.filter((i) => cartItemKey(i.productId, i.variantId) !== key)
   saveCart(updated)
   return updated
 }

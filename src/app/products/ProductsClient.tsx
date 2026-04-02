@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Search } from 'lucide-react'
+import { Search, ShoppingBag } from 'lucide-react'
 import { addToCart } from '@/lib/cart'
 import { fetchProducts } from '@/lib/api'
 import type { ProductWithMeta } from '@/lib/api'
@@ -70,7 +70,7 @@ export default function ProductsClient() {
 
       {!loading && !error && products.length === 0 && (
         <div className="text-center py-24 text-[#8E8E93]">
-          <div className="text-5xl mb-4">🔍</div>
+          <Search size={48} className="mx-auto mb-4 text-[#8E8E93]" />
           <p className="text-[14px]">找不到符合的商品</p>
         </div>
       )}
@@ -93,7 +93,7 @@ export default function ProductsClient() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl">🛍️</div>
+                      <div className="w-full h-full flex items-center justify-center"><ShoppingBag size={40} className="text-[#C8C8C8]" /></div>
                     )}
                   </div>
                   <div className="p-3 md:p-4 flex flex-col gap-1 md:gap-2">
