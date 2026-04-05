@@ -1,14 +1,11 @@
-import type { ApiResponse, Product, Order } from './api'
+import type { ApiResponse, Product, Order, ProductWithMeta, CategorySummary, CategoryWithProducts, CategoryProductItem } from '../types'
 import { mockProducts, mockCategories } from './mock-data'
 
-export interface ProductWithMeta extends Product {
-  image: string
-  rating: number
-  reviewCount: number
-  soldCount: number
-  tag?: string
-  originalPrice?: number
-}
+// 向後相容的別名（現有頁面從 mock-handlers 直接 import 的舊名稱）
+export type { ProductWithMeta }
+export type MockCategory = CategorySummary
+export type MockCategoryData = CategoryWithProducts
+export type MockCategoryProduct = CategoryProductItem
 
 function toProductWithMeta(p: (typeof mockProducts)[0]): ProductWithMeta {
   const now = new Date().toISOString()
@@ -20,6 +17,7 @@ function toProductWithMeta(p: (typeof mockProducts)[0]): ProductWithMeta {
     price: p.price,
     status: 'active',
     categoryId: p.category,
+    images: [],
     image: p.image,
     rating: p.rating,
     reviewCount: p.reviewCount,
@@ -75,9 +73,8 @@ export async function mockCreateOrder(input: {
   const order: Order = {
     id: `ORD-${Date.now()}`,
     customerId: 'mock-customer',
-    status: 'pending_ship',
+    status: 'pending',
     paymentMethod: 'seller_ship',
-    paymentStatus: 'pending',
     totalAmount,
     note: null,
     createdAt: now,
@@ -86,43 +83,18 @@ export async function mockCreateOrder(input: {
   return { data: order, error: null }
 }
 
-export interface MockCategory {
-  id: string
-  slug: string
-  name: string
-  icon: string
-  color: string
-  productCount: number
-}
-
-export function mockFetchCategories(): ApiResponse<MockCategory[]> {
+export function mockFetchCategories(): ApiResponse<CategorySummary[]> {
   const data = mockCategories.map((c) => ({
     ...c,
+    parentId: null,
     productCount: mockProducts.filter((p) => p.category === c.slug).length,
   }))
   return { data, error: null }
 }
 
-export interface MockCategoryProduct {
-  id: string
-  name: string
-  slug: string | null
-  price: number
-  status: string
-  image: string
-  inventory: { quantity: number } | null
-}
-
-export interface MockCategoryData {
-  id: string
-  name: string
-  slug: string
-  products: MockCategoryProduct[]
-}
-
 export async function mockFetchCategoryById(
   id: string,
-): Promise<ApiResponse<MockCategoryData>> {
+): Promise<ApiResponse<CategoryWithProducts>> {
   const found = mockCategories.find((c) => c.id === id)
   if (!found) {
     return { data: null, error: { code: 'NOT_FOUND', message: '分類不存在' } }

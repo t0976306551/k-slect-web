@@ -1,4 +1,4 @@
-// 統一核心型別 — 匹配 Prisma schema + 前後台共用
+// 統一核心型別 — 匹配 Prisma schema（k-slect-web 後端）
 
 export type ApiResponse<T> =
   | { data: T; error: null }
@@ -17,6 +17,35 @@ export interface Category {
   updatedAt: string
 }
 
+// 分類摘要（列表頁顯示用，含商品數量與 UI 顯示欄位）
+export interface CategorySummary {
+  id: string
+  slug: string
+  name: string
+  parentId: string | null
+  icon?: string    // UI 顯示用，後端不回傳
+  color?: string   // UI 顯示用，後端不回傳
+  productCount: number
+}
+
+// 分類詳情（含商品列表）
+export interface CategoryWithProducts {
+  id: string
+  name: string
+  slug: string
+  products: CategoryProductItem[]
+}
+
+export interface CategoryProductItem {
+  id: string
+  name: string
+  slug: string | null
+  price: number
+  status: string
+  image: string | null
+  inventory: { quantity: number } | null
+}
+
 // --- Inventory ---
 export interface Inventory {
   id: string
@@ -29,6 +58,7 @@ export interface Inventory {
 }
 
 // --- Product Variants ---
+// Prisma 透過 ProductVariantOption join model 回傳，保留完整結構
 export interface ProductOptionValue {
   id: string
   optionId: string
@@ -67,15 +97,27 @@ export interface Product {
   slug: string | null
   description: string | null
   price: number           // 台幣，整數
+  originalPrice?: number | null  // 原價（劃線價）
   status: 'active' | 'inactive'
   categoryId: string
   category?: Pick<Category, 'id' | 'name' | 'slug'>
   inventory?: Pick<Inventory, 'sku' | 'quantity' | 'lowStockThreshold'>
-  images?: string[]       // 商品圖片 URL 陣列（未來 schema 擴充）
+  image?: string | null   // images[0]，API 層轉換後加入
+  images: string[] // 商品圖片 URL 陣列
   options?: ProductOption[]
   variants?: ProductVariant[]
   createdAt: string
   updatedAt: string
+}
+
+// 前台商品展示（含 UI 顯示用欄位）
+export interface ProductWithMeta extends Product {
+  image: string | null
+  originalPrice?: number | null
+  rating: number
+  reviewCount: number
+  soldCount: number
+  tag?: string
 }
 
 // --- Customer ---
@@ -100,26 +142,24 @@ export interface OrderItem {
   id: string
   orderId: string
   productId: string
-  product?: Pick<Product, 'id' | 'name' | 'slug'>
+  product?: Pick<Product, 'id' | 'name'>  // Prisma select 只回傳 id + name
   variantId?: string | null
   variantSnapshot?: Record<string, string> | null  // {"顏色":"紅色","尺寸":"M"}
   quantity: number
-  priceAtOrder: number    // 下單當下價格快照（Prisma schema 欄位名）
+  priceAtOrder: number    // 下單當下價格快照
   createdAt: string
   updatedAt: string
 }
 
 // --- Order ---
 export type OrderStatus =
-  | 'pending_ship'
+  | 'pending'
+  | 'confirmed'
   | 'shipped'
   | 'completed'
   | 'cancelled'
-  | 'refund_pending'
-  | 'refunded'
 
-export type PaymentMethod = 'seller_ship'
-export type PaymentStatus = 'pending' | 'paid' | 'failed'
+export type PaymentMethod = 'seller_ship' | 'bank_transfer'
 
 export interface Order {
   id: string
@@ -127,7 +167,6 @@ export interface Order {
   customer?: Customer
   status: OrderStatus
   paymentMethod: PaymentMethod
-  paymentStatus: PaymentStatus
   totalAmount: number     // 台幣，整數
   note: string | null
   items?: OrderItem[]
@@ -154,7 +193,7 @@ export interface Promotion {
   updatedAt: string
 }
 
-// --- Create Inputs ---
+// --- API Inputs ---
 export interface CreateOrderInput {
   customerName: string
   customerEmail?: string
@@ -165,13 +204,28 @@ export interface CreateOrderInput {
   items: Array<{ productId: string; quantity: number; variantId?: string }>
 }
 
+export interface CreatePromotionInput {
+  channel: PromotionChannel
+  productIds: string[]
+  message: string
+  utmUrl?: string
+  status?: PromotionStatus
+  metadata?: Record<string, unknown>
+}
+
+export interface LineMessageResult {
+  text: string
+  productUrl: string
+  products: Array<{ id: string; name: string; price: number }>
+}
+
 // --- Cart（前台專用）---
 export interface CartItem {
   readonly productId: string
   readonly productName: string
   readonly price: number
   quantity: number
-  readonly image?: string
+  readonly image?: string | null
   readonly slug?: string
   readonly variantId?: string
   readonly variantLabel?: string  // 顯示用，例如 "紅色 / M"

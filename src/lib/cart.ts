@@ -1,13 +1,6 @@
-export interface CartItem {
-  readonly productId: string
-  readonly productName: string
-  readonly price: number
-  quantity: number
-  readonly image?: string
-  readonly slug?: string
-  readonly variantId?: string
-  readonly variantLabel?: string  // 顯示用，例如 "紅色 / M"
-}
+import type { CartItem } from '@/types'
+
+export type { CartItem }
 
 const CART_KEY = 'k_slect_cart'
 

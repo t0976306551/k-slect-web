@@ -53,7 +53,7 @@ export default function CategoriesClient() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5">
         {categories.map((cat) => {
-          const Icon = iconMap[cat.icon] ?? Package
+          const Icon = iconMap[cat.icon ?? ''] ?? Package
           return (
             <Link
               key={cat.id}

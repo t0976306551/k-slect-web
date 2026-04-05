@@ -24,6 +24,8 @@ model Product {
   slug        String?          @unique // kebab-case，SEO URL 用
   description String?
   price       Int              // 台幣元，避免浮點數誤差
+  originalPrice Int?           // 原價（劃線價），用於顯示折扣
+  images      String[]         @default([]) // 商品圖片 URL 陣列
   status      String           @default("active") // active | inactive
   categoryId  String
   category    Category         @relation(fields: [categoryId], references: [id])

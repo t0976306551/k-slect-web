@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AppError, ValidationError } from '@/lib/errors'
 import { generateSlug } from '@/lib/slug'
+import { toProductResponse, toProductListResponse } from '../helpers'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,6 +55,8 @@ const createProductSchema = z
     slug: z.string().min(1).optional(),
     description: z.string().optional(),
     price: z.number().int().positive(),
+    originalPrice: z.number().int().positive().optional(),
+    images: z.array(z.string()).optional(),
     status: z.enum(['active', 'inactive']).default('active'),
     categoryId: z.string().min(1),
     inventory: z
@@ -102,7 +105,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
-    return ok(products)
+    return ok(toProductListResponse(products))
   } catch (e) {
     return fail(e)
   }
@@ -177,7 +180,7 @@ export async function POST(req: NextRequest) {
         })
       })
 
-      return ok(product, 201)
+      return ok(toProductResponse(product), 201)
     }
 
     // 無 variants：單一商品建立
@@ -193,7 +196,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return ok(product, 201)
+    return ok(toProductResponse(product), 201)
   } catch (e) {
     return fail(e)
   }

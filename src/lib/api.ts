@@ -1,17 +1,21 @@
 import { mockFetchProducts, mockFetchProduct, mockCreateOrder, mockFetchCategoryById, mockFetchCategories } from './mock-handlers'
-import type { MockCategoryData, MockCategoryProduct, ProductWithMeta, MockCategory } from './mock-handlers'
 import type {
   ApiResponse,
   Product,
+  ProductWithMeta,
   Order,
   OrderStatus,
   PaymentMethod,
-  PaymentStatus,
   Promotion,
   PromotionChannel,
   PromotionStatus,
   CreateOrderInput,
+  CreatePromotionInput,
+  LineMessageResult,
   CartItem,
+  CategorySummary,
+  CategoryWithProducts,
+  CategoryProductItem,
 } from '../types'
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
@@ -20,26 +24,26 @@ const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
 export type {
   ApiResponse,
   Product,
+  ProductWithMeta,
   Order,
   OrderStatus,
   PaymentMethod,
-  PaymentStatus,
   Promotion,
   PromotionChannel,
   PromotionStatus,
   CreateOrderInput,
+  CreatePromotionInput,
+  LineMessageResult,
   CartItem,
+  CategorySummary,
+  CategoryWithProducts,
+  CategoryProductItem,
 }
 
-// 局部使用：create promotion 的輸入（僅 api.ts 內部邏輯需要）
-interface CreatePromotionInput {
-  channel: PromotionChannel
-  productIds: string[]
-  message: string
-  utmUrl?: string
-  status?: PromotionStatus
-  metadata?: Record<string, unknown>
-}
+// 向後相容的別名（現有頁面從 api.ts import 的舊名稱）
+export type MockCategory = CategorySummary
+export type MockCategoryData = CategoryWithProducts
+export type MockCategoryProduct = CategoryProductItem
 
 export async function fetchProducts(params?: {
   categoryId?: string
@@ -75,19 +79,16 @@ export async function createOrder(
   return res.json() as Promise<ApiResponse<Order>>
 }
 
-export type { MockCategoryData, MockCategoryProduct, MockCategory }
-export type { ProductWithMeta }
-
-export async function fetchCategories(): Promise<ApiResponse<MockCategory[]>> {
+export async function fetchCategories(): Promise<ApiResponse<CategorySummary[]>> {
   if (USE_MOCK) return mockFetchCategories()
   const res = await fetch('/api/v1/categories')
-  return res.json() as Promise<ApiResponse<MockCategory[]>>
+  return res.json() as Promise<ApiResponse<CategorySummary[]>>
 }
 
-export async function fetchCategoryById(id: string): Promise<ApiResponse<MockCategoryData>> {
+export async function fetchCategoryById(id: string): Promise<ApiResponse<CategoryWithProducts>> {
   if (USE_MOCK) return mockFetchCategoryById(id)
   const res = await fetch(`/api/v1/categories/${id}`)
-  return res.json() as Promise<ApiResponse<MockCategoryData>>
+  return res.json() as Promise<ApiResponse<CategoryWithProducts>>
 }
 
 // --- Promotions ---
@@ -123,12 +124,6 @@ export async function createPromotion(
 export async function deletePromotion(id: string): Promise<ApiResponse<{ deleted: boolean }>> {
   const res = await fetch(`/api/v1/promotions/${id}`, { method: 'DELETE' })
   return res.json() as Promise<ApiResponse<{ deleted: boolean }>>
-}
-
-export interface LineMessageResult {
-  text: string
-  productUrl: string
-  products: Array<{ id: string; name: string; price: number }>
 }
 
 export async function generateLineMessage(

@@ -38,7 +38,12 @@ export async function GET() {
       orderBy: { name: 'asc' },
     })
 
-    return ok(categories)
+    return ok(
+      categories.map(({ _count, ...cat }) => ({
+        ...cat,
+        productCount: _count.products,
+      })),
+    )
   } catch (e) {
     return fail(e)
   }

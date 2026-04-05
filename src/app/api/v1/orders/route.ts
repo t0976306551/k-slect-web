@@ -66,7 +66,7 @@ const createOrderSchema = z.object({
   customerEmail: z.string().min(1),
   customerPhone: z.string().optional(),
   customerAddress: z.string().min(1),
-  paymentMethod: z.enum(['seller_ship']),
+  paymentMethod: z.enum(['seller_ship', 'bank_transfer']),
   note: z.string().optional(),
   items: z
     .array(

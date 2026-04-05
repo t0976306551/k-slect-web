@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AppError, NotFoundError, ValidationError } from '@/lib/errors'
 import { isCuid } from '@/lib/slug'
+import { toProductResponse } from '../../helpers'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,6 +54,8 @@ const updateProductSchema = z.object({
   slug: z.string().min(1).optional(),
   description: z.string().optional(),
   price: z.number().int().positive().optional(),
+  originalPrice: z.number().int().positive().nullable().optional(),
+  images: z.array(z.string()).optional(),
   status: z.enum(['active', 'inactive']).optional(),
   categoryId: z.string().min(1).optional(),
   options: z.array(optionInputSchema).optional(),
@@ -87,7 +90,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     })
 
     if (!product) throw new NotFoundError('商品')
-    return ok(product)
+    return ok(toProductResponse(product))
   } catch (e) {
     return fail(e)
   }
@@ -170,7 +173,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
         })
       })
 
-      return ok(product)
+      return ok(toProductResponse(product))
     }
 
     // 無 variants：一般更新
@@ -183,7 +186,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       },
     })
 
-    return ok(product)
+    return ok(toProductResponse(product))
   } catch (e) {
     return fail(e)
   }
