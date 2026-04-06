@@ -1,59 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
-import { AppError, NotFoundError, ValidationError } from '@/lib/errors'
+import { backendRequest } from '@/lib/backend'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-type ApiSuccess<T> = { data: T; error: null }
-type ApiError = { data: null; error: { code: string; message: string } }
+type RouteContext = { params: Promise<{ id: string }> }
 
-function ok<T>(data: T): NextResponse<ApiSuccess<T>> {
-  return NextResponse.json({ data, error: null })
-}
-
-function fail(e: unknown): NextResponse<ApiError> {
-  if (e instanceof AppError) {
-    return NextResponse.json(
-      { data: null, error: { code: e.code, message: e.message } },
-      { status: e.statusCode },
-    )
-  }
-  console.error('[API Error]', e)
-  return NextResponse.json(
-    { data: null, error: { code: 'INTERNAL_ERROR', message: '伺服器內部錯誤' } },
-    { status: 500 },
-  )
-}
-
-const updateInventorySchema = z.object({
+const patchInventorySchema = z.object({
   quantity: z.number().int().min(0).optional(),
   lowStockThreshold: z.number().int().min(0).optional(),
   sku: z.string().min(1).optional(),
 })
 
-type RouteContext = { params: Promise<{ id: string }> }
-
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
-  try {
-    const { id } = await params
-    const body: unknown = await req.json()
-    const result = updateInventorySchema.safeParse(body)
-    if (!result.success) throw new ValidationError(result.error.message)
+  const authError = requireAdmin(req)
+  if (authError) return authError
 
-    const existing = await prisma.inventory.findUnique({ where: { id } })
-    if (!existing) throw new NotFoundError('庫存')
-
-    const inventory = await prisma.inventory.update({
-      where: { id },
-      data: result.data,
-      include: {
-        product: { select: { id: true, name: true, status: true } },
-      },
-    })
-
-    return ok(inventory)
-  } catch (e) {
-    return fail(e)
+  const { id } = await params
+  const raw: unknown = await req.json().catch(() => null)
+  const parsed = patchInventorySchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { data: null, error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') } },
+      { status: 400 },
+    )
   }
+
+  const result = await backendRequest(`/inventory/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(parsed.data),
+  })
+  const status = result.error?.code === 'NOT_FOUND' ? 404 : result.error ? 500 : 200
+  return NextResponse.json(result, { status })
 }

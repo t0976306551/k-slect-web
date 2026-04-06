@@ -1,4 +1,4 @@
-// 統一核心型別 — 匹配 Prisma schema（k-slect-web 後端）
+// 統一核心型別 — 匹配 k-slect-backend TypeORM 實體
 
 export type ApiResponse<T> =
   | { data: T; error: null }
@@ -58,7 +58,6 @@ export interface Inventory {
 }
 
 // --- Product Variants ---
-// Prisma 透過 ProductVariantOption join model 回傳，保留完整結構
 export interface ProductOptionValue {
   id: string
   optionId: string
@@ -83,11 +82,7 @@ export interface ProductVariant {
   quantity: number
   lowStockThreshold: number
   status: string
-  variantOptions: Array<{
-    variantId: string
-    optionValueId: string
-    optionValue: ProductOptionValue
-  }>
+  optionValues?: ProductOptionValue[]  // TypeORM ManyToMany 直接回傳陣列
 }
 
 // --- Product ---
@@ -100,10 +95,12 @@ export interface Product {
   originalPrice?: number | null  // 原價（劃線價）
   status: 'active' | 'inactive'
   categoryId: string
+  externalUrl: string | null
+  origin: string | null
   category?: Pick<Category, 'id' | 'name' | 'slug'>
   inventory?: Pick<Inventory, 'sku' | 'quantity' | 'lowStockThreshold'>
   image?: string | null   // images[0]，API 層轉換後加入
-  images: string[] // 商品圖片 URL 陣列
+  images: string[] | null // 商品圖片 URL 陣列（後台 jsonb nullable）
   options?: ProductOption[]
   variants?: ProductVariant[]
   createdAt: string
@@ -121,7 +118,7 @@ export interface ProductWithMeta extends Product {
 }
 
 // --- Customer ---
-export type CustomerStatus = 'active' | 'blacklisted' | 'vip'
+export type CustomerStatus = 'active' | 'inactive' | 'blacklisted' | 'vip'
 
 export interface Customer {
   id: string
@@ -141,9 +138,10 @@ export interface Customer {
 export interface OrderItem {
   id: string
   orderId: string
-  productId: string
-  product?: Pick<Product, 'id' | 'name'>  // Prisma select 只回傳 id + name
-  variantId?: string | null
+  productId: string | null
+  productName: string      // 下單時商品名稱快照
+  sku: string              // 下單時 SKU 快照
+  image: string | null
   variantSnapshot?: Record<string, string> | null  // {"顏色":"紅色","尺寸":"M"}
   quantity: number
   priceAtOrder: number    // 下單當下價格快照
@@ -153,20 +151,29 @@ export interface OrderItem {
 
 // --- Order ---
 export type OrderStatus =
-  | 'pending'
-  | 'confirmed'
+  | 'pending_ship'
   | 'shipped'
   | 'completed'
   | 'cancelled'
+  | 'refund_pending'
+  | 'refunded'
 
 export type PaymentMethod = 'seller_ship' | 'bank_transfer'
+export type PaymentStatus = 'pending' | 'paid' | 'failed'
 
 export interface Order {
   id: string
+  orderNo: string
   customerId: string
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  shippingAddress: string
+  trackingNo: string | null
   customer?: Customer
   status: OrderStatus
   paymentMethod: PaymentMethod
+  paymentStatus: PaymentStatus
   totalAmount: number     // 台幣，整數
   note: string | null
   items?: OrderItem[]
@@ -181,7 +188,7 @@ export type PromotionStatus = 'draft' | 'scheduled' | 'sent' | 'failed'
 export interface Promotion {
   id: string
   channel: PromotionChannel
-  platform: string        // 'line' | 'facebook' | 'both'
+  platform: string
   productIds: string[]
   message: string
   utmUrl: string | null

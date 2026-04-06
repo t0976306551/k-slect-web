@@ -7,9 +7,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
+import { storefrontRequest } from '@/lib/backend'
 import { AppError, NotFoundError, ValidationError } from '@/lib/errors'
 import { generatePromotionCopy, checkRateLimit } from '@/lib/claude'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +41,19 @@ const schema = z.object({
   lang: z.enum(['zh-TW', 'ja']).default('zh-TW'),
 })
 
+type ProductData = {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  status: string
+  category?: { name: string }
+}
+
 export async function POST(req: NextRequest) {
+  const authError = requireAdmin(req)
+  if (authError) return authError
+
   try {
     // 速率限制（依 IP）
     const ip =
@@ -57,28 +70,20 @@ export async function POST(req: NextRequest) {
 
     const { productId, platform } = result.data
 
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        price: true,
-        status: true,
-        category: { select: { name: true } },
-      },
-    })
+    const productResult = await storefrontRequest<ProductData>(`/products/${productId}`)
 
-    if (!product || product.status !== 'active') {
+    if (productResult.error || !productResult.data || productResult.data.status !== 'active') {
       throw new NotFoundError(`找不到商品 ID: ${productId}`)
     }
+
+    const product = productResult.data
 
     const copy = await generatePromotionCopy(
       {
         name: product.name,
         description: product.description,
         price: product.price,
-        category: product.category.name,
+        category: product.category?.name ?? '',
       },
       platform,
     )

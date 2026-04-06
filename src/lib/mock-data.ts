@@ -1,3 +1,5 @@
+import type { ProductOption, ProductVariant } from '@/types'
+
 export interface MockProduct {
   id: string;
   name: string;
@@ -11,6 +13,8 @@ export interface MockProduct {
   soldCount: number;
   description?: string;
   tag?: string;
+  options?: ProductOption[]
+  variants?: ProductVariant[]
 }
 
 export const mockProducts: MockProduct[] = [
@@ -26,6 +30,46 @@ export const mockProducts: MockProduct[] = [
     reviewCount: 1203,
     soldCount: 3847,
     description: "COSRX Advanced Snail 96 Mucin Power Essence 蝸牛精華液，深度保濕修護，適合所有膚質。",
+    options: [
+      {
+        id: "opt1-spec",
+        productId: "1",
+        name: "規格",
+        position: 0,
+        values: [
+          { id: "v1-30ml", optionId: "opt1-spec", value: "30ml", position: 0 },
+          { id: "v1-96ml", optionId: "opt1-spec", value: "96ml", position: 1 },
+        ],
+      },
+    ],
+    variants: [
+      {
+        id: "var1-30ml",
+        productId: "1",
+        sku: "cosrx-snail-30ml",
+        price: 280,
+        image: null,
+        quantity: 50,
+        lowStockThreshold: 5,
+        status: "active",
+        optionValues: [
+          { id: "v1-30ml", optionId: "opt1-spec", value: "30ml", position: 0 },
+        ],
+      },
+      {
+        id: "var1-96ml",
+        productId: "1",
+        sku: "cosrx-snail-96ml",
+        price: null,
+        image: null,
+        quantity: 99,
+        lowStockThreshold: 5,
+        status: "active",
+        optionValues: [
+          { id: "v1-96ml", optionId: "opt1-spec", value: "96ml", position: 1 },
+        ],
+      },
+    ],
   },
   {
     id: "2",
@@ -51,6 +95,73 @@ export const mockProducts: MockProduct[] = [
     reviewCount: 456,
     soldCount: 1200,
     description: "簡約韓版帆布托特包，大容量設計，適合日常通勤與購物使用。",
+    options: [
+      {
+        id: "opt3-color",
+        productId: "3",
+        name: "顏色",
+        position: 0,
+        values: [
+          { id: "v3c-black", optionId: "opt3-color", value: "黑色", position: 0 },
+          { id: "v3c-beige", optionId: "opt3-color", value: "米色", position: 1 },
+          { id: "v3c-blue",  optionId: "opt3-color", value: "藍色", position: 2 },
+        ],
+      },
+      {
+        id: "opt3-size",
+        productId: "3",
+        name: "尺寸",
+        position: 1,
+        values: [
+          { id: "v3s-s", optionId: "opt3-size", value: "S", position: 0 },
+          { id: "v3s-l", optionId: "opt3-size", value: "L", position: 1 },
+        ],
+      },
+    ],
+    variants: [
+      {
+        id: "var3-bs", productId: "3", sku: "tote-black-s", price: null,  image: null, quantity: 20, lowStockThreshold: 5, status: "active",
+        optionValues: [
+          { id: "v3c-black", optionId: "opt3-color", value: "黑色", position: 0 },
+          { id: "v3s-s",     optionId: "opt3-size",  value: "S",   position: 0 },
+        ],
+      },
+      {
+        id: "var3-bl", productId: "3", sku: "tote-black-l", price: 750,  image: null, quantity: 15, lowStockThreshold: 5, status: "active",
+        optionValues: [
+          { id: "v3c-black", optionId: "opt3-color", value: "黑色", position: 0 },
+          { id: "v3s-l",     optionId: "opt3-size",  value: "L",   position: 1 },
+        ],
+      },
+      {
+        id: "var3-es", productId: "3", sku: "tote-beige-s", price: null,  image: null, quantity: 0,  lowStockThreshold: 5, status: "active",
+        optionValues: [
+          { id: "v3c-beige", optionId: "opt3-color", value: "米色", position: 1 },
+          { id: "v3s-s",     optionId: "opt3-size",  value: "S",   position: 0 },
+        ],
+      },
+      {
+        id: "var3-el", productId: "3", sku: "tote-beige-l", price: 750,  image: null, quantity: 10, lowStockThreshold: 5, status: "active",
+        optionValues: [
+          { id: "v3c-beige", optionId: "opt3-color", value: "米色", position: 1 },
+          { id: "v3s-l",     optionId: "opt3-size",  value: "L",   position: 1 },
+        ],
+      },
+      {
+        id: "var3-us", productId: "3", sku: "tote-blue-s",  price: null,  image: null, quantity: 12, lowStockThreshold: 5, status: "active",
+        optionValues: [
+          { id: "v3c-blue",  optionId: "opt3-color", value: "藍色", position: 2 },
+          { id: "v3s-s",     optionId: "opt3-size",  value: "S",   position: 0 },
+        ],
+      },
+      {
+        id: "var3-ul", productId: "3", sku: "tote-blue-l",  price: 750,  image: null, quantity: 8,  lowStockThreshold: 5, status: "active",
+        optionValues: [
+          { id: "v3c-blue",  optionId: "opt3-color", value: "藍色", position: 2 },
+          { id: "v3s-l",     optionId: "opt3-size",  value: "L",   position: 1 },
+        ],
+      },
+    ],
   },
   {
     id: "4",
@@ -111,6 +222,39 @@ export const mockProducts: MockProduct[] = [
     rating: 4.4,
     reviewCount: 234,
     soldCount: 876,
+    options: [
+      {
+        id: "opt8-color",
+        productId: "8",
+        name: "顏色",
+        position: 0,
+        values: [
+          { id: "v8c-black", optionId: "opt8-color", value: "黑色",  position: 0 },
+          { id: "v8c-white", optionId: "opt8-color", value: "白色",  position: 1 },
+          { id: "v8c-denim", optionId: "opt8-color", value: "牛仔藍", position: 2 },
+        ],
+      },
+    ],
+    variants: [
+      {
+        id: "var8-black", productId: "8", sku: "cap-black", price: null, image: null, quantity: 25, lowStockThreshold: 5, status: "active",
+        optionValues: [
+          { id: "v8c-black", optionId: "opt8-color", value: "黑色",  position: 0 },
+        ],
+      },
+      {
+        id: "var8-white", productId: "8", sku: "cap-white", price: null, image: null, quantity: 0,  lowStockThreshold: 5, status: "active",
+        optionValues: [
+          { id: "v8c-white", optionId: "opt8-color", value: "白色",  position: 1 },
+        ],
+      },
+      {
+        id: "var8-denim", productId: "8", sku: "cap-denim", price: null, image: null, quantity: 18, lowStockThreshold: 5, status: "active",
+        optionValues: [
+          { id: "v8c-denim", optionId: "opt8-color", value: "牛仔藍", position: 2 },
+        ],
+      },
+    ],
   },
 ];
 

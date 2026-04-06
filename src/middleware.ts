@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { parseUserToken } from '@/lib/auth'
 
-const PROTECTED_PATHS = ['/account']
+const USER_PATHS = ['/account']
+const ADMIN_PATHS = ['/admin']
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const isProtected = PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
 
-  if (!isProtected) return NextResponse.next()
+  const isUserPath = USER_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
+  const isAdminPath = ADMIN_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
+
+  if (!isUserPath && !isAdminPath) return NextResponse.next()
 
   const token = req.cookies.get('user_token')?.value
   if (!token) {
@@ -16,27 +20,23 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // 驗證 token 格式與過期時間
-  try {
-    const payload = JSON.parse(atob(token))
-    if (!payload.id || Date.now() > payload.exp) {
-      const loginUrl = req.nextUrl.clone()
-      loginUrl.pathname = '/login'
-      loginUrl.searchParams.set('from', pathname)
-      const res = NextResponse.redirect(loginUrl)
-      res.cookies.delete('user_token')
-      return res
-    }
-  } catch {
+  const payload = parseUserToken(token)
+  if (!payload) {
     const loginUrl = req.nextUrl.clone()
     loginUrl.pathname = '/login'
     loginUrl.searchParams.set('from', pathname)
-    return NextResponse.redirect(loginUrl)
+    const res = NextResponse.redirect(loginUrl)
+    res.cookies.delete('user_token')
+    return res
+  }
+
+  if (isAdminPath && !payload.isAdmin) {
+    return NextResponse.redirect(new URL('/', req.url))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/account/:path*'],
+  matcher: ['/account/:path*', '/admin/:path*'],
 }

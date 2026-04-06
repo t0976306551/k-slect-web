@@ -1,98 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
-import { AppError, NotFoundError, ValidationError } from '@/lib/errors'
+import { backendRequest } from '@/lib/backend'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-type ApiSuccess<T> = { data: T; error: null }
-type ApiError = { data: null; error: { code: string; message: string } }
-
-function ok<T>(data: T, status = 200): NextResponse<ApiSuccess<T>> {
-  return NextResponse.json({ data, error: null }, { status })
-}
-
-function fail(e: unknown): NextResponse<ApiError> {
-  if (e instanceof AppError) {
-    return NextResponse.json(
-      { data: null, error: { code: e.code, message: e.message } },
-      { status: e.statusCode },
-    )
-  }
-  console.error('[Promotions API Error]', e)
-  return NextResponse.json(
-    { data: null, error: { code: 'INTERNAL_ERROR', message: '伺服器內部錯誤' } },
-    { status: 500 },
-  )
-}
-
-const updatePromotionSchema = z.object({
-  status: z.enum(['draft', 'sent', 'scheduled', 'failed']).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-})
-
-type RouteParams = { params: { id: string } }
+type RouteContext = { params: Promise<{ id: string }> }
 
 /** GET /api/v1/promotions/[id] — 取得單一推廣紀錄 */
-export async function GET(_req: NextRequest, { params }: RouteParams) {
-  try {
-    const promotion = await prisma.promotion.findUnique({
-      where: { id: params.id },
-    })
-
-    if (!promotion) {
-      throw new NotFoundError(`推廣紀錄 ${params.id} 不存在`)
-    }
-
-    return ok(promotion)
-  } catch (e) {
-    return fail(e)
-  }
+export async function GET(_req: NextRequest, { params }: RouteContext) {
+  const { id } = await params
+  const result = await backendRequest(`/promotions/${id}`)
+  const status = result.error?.code === 'NOT_FOUND' ? 404 : result.error ? 500 : 200
+  return NextResponse.json(result, { status })
 }
 
 /** PATCH /api/v1/promotions/[id] — 更新推廣紀錄狀態 */
-export async function PATCH(req: NextRequest, { params }: RouteParams) {
-  try {
-    const existing = await prisma.promotion.findUnique({ where: { id: params.id } })
-    if (!existing) {
-      throw new NotFoundError(`推廣紀錄 ${params.id} 不存在`)
-    }
+export async function PATCH(req: NextRequest, { params }: RouteContext) {
+  const authError = requireAdmin(req)
+  if (authError) return authError
 
-    const body = await req.json() as unknown
-    const parsed = updatePromotionSchema.safeParse(body)
-    if (!parsed.success) {
-      throw new ValidationError(parsed.error.issues.map((i) => i.message).join('; '))
-    }
-
-    const updated = await prisma.promotion.update({
-      where: { id: params.id },
-      data: {
-        ...(parsed.data.status ? { status: parsed.data.status } : {}),
-        ...(parsed.data.metadata !== undefined
-          ? { metadata: parsed.data.metadata as Prisma.InputJsonValue }
-          : {}),
-      },
-    })
-
-    return ok(updated)
-  } catch (e) {
-    return fail(e)
-  }
+  const { id } = await params
+  const body = await req.json()
+  const result = await backendRequest(`/promotions/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+  const status = result.error?.code === 'NOT_FOUND' ? 404 : result.error ? 500 : 200
+  return NextResponse.json(result, { status })
 }
 
 /** DELETE /api/v1/promotions/[id] — 刪除推廣紀錄 */
-export async function DELETE(_req: NextRequest, { params }: RouteParams) {
-  try {
-    const existing = await prisma.promotion.findUnique({ where: { id: params.id } })
-    if (!existing) {
-      throw new NotFoundError(`推廣紀錄 ${params.id} 不存在`)
-    }
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
+  const authError = requireAdmin(req)
+  if (authError) return authError
 
-    await prisma.promotion.delete({ where: { id: params.id } })
-
-    return ok({ deleted: true })
-  } catch (e) {
-    return fail(e)
-  }
+  const { id } = await params
+  const result = await backendRequest(`/promotions/${id}`, { method: 'DELETE' })
+  const status = result.error?.code === 'NOT_FOUND' ? 404 : result.error ? 500 : 200
+  return NextResponse.json(result, { status })
 }

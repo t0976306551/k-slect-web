@@ -1,18 +1,19 @@
 import type { MetadataRoute } from 'next'
-import { prisma } from '@/lib/prisma'
+import { storefrontRequest } from '@/lib/backend'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://k-slect.com'
 
+type ProductItem = { id: string; slug: string | null; updatedAt: string }
+type CategoryItem = { slug: string; updatedAt: string }
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, categories] = await Promise.all([
-    prisma.product.findMany({
-      where: { status: 'active' },
-      select: { id: true, slug: true, updatedAt: true },
-    }),
-    prisma.category.findMany({
-      select: { slug: true, updatedAt: true },
-    }),
+  const [productsResult, categoriesResult] = await Promise.all([
+    storefrontRequest<ProductItem[]>('/products?status=active&limit=500'),
+    storefrontRequest<CategoryItem[]>('/categories'),
   ])
+
+  const products = productsResult.data ?? []
+  const categories = categoriesResult.data ?? []
 
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -31,15 +32,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const categoryPages: MetadataRoute.Sitemap = categories.map((cat) => ({
     url: `${SITE_URL}/category/${cat.slug}`,
-    lastModified: cat.updatedAt,
+    lastModified: new Date(cat.updatedAt),
     changeFrequency: 'weekly',
     priority: 0.9,
   }))
 
   const productPages: MetadataRoute.Sitemap = products.map((product) => ({
-    // ALA-39 完成後，slug 會全部有值，屆時換成 /products/${product.slug}
     url: `${SITE_URL}/products/${product.slug ?? product.id}`,
-    lastModified: product.updatedAt,
+    lastModified: new Date(product.updatedAt),
     changeFrequency: 'weekly',
     priority: 0.8,
   }))

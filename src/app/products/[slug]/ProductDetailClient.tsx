@@ -18,7 +18,7 @@ function findVariant(
   if (entries.length === 0) return undefined
   return variants.find((v) =>
     entries.every(([, valueId]) =>
-      v.variantOptions.some((vo) => vo.optionValueId === valueId)
+      v.optionValues?.some((ov) => ov.id === valueId)
     )
   )
 }
@@ -83,7 +83,7 @@ export default function ProductDetailClient() {
     const entries = Object.entries(tentative)
     const matched = product.variants.filter((v) =>
       entries.every(([, vid]) =>
-        v.variantOptions.some((vo) => vo.optionValueId === vid)
+        v.optionValues?.some((ov) => ov.id === vid)
       )
     )
     return matched.length > 0 && matched.every((v) => v.quantity === 0)

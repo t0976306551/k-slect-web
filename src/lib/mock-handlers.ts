@@ -17,6 +17,8 @@ function toProductWithMeta(p: (typeof mockProducts)[0]): ProductWithMeta {
     price: p.price,
     status: 'active',
     categoryId: p.category,
+    externalUrl: null,
+    origin: null,
     images: [],
     image: p.image,
     rating: p.rating,
@@ -27,6 +29,8 @@ function toProductWithMeta(p: (typeof mockProducts)[0]): ProductWithMeta {
     createdAt: now,
     updatedAt: now,
     inventory: { sku: `mock-${p.id}`, quantity: 99, lowStockThreshold: 5 },
+    options: p.options,
+    variants: p.variants,
   }
 }
 
@@ -72,9 +76,16 @@ export async function mockCreateOrder(input: {
 
   const order: Order = {
     id: `ORD-${Date.now()}`,
+    orderNo: `ORD-MOCK-${Date.now()}`,
     customerId: 'mock-customer',
-    status: 'pending',
+    customerName: input.customerName,
+    customerEmail: 'mock@k-slect.com',
+    customerPhone: '',
+    shippingAddress: input.customerAddress,
+    trackingNo: null,
+    status: 'pending_ship',
     paymentMethod: 'seller_ship',
+    paymentStatus: 'pending',
     totalAmount,
     note: null,
     createdAt: now,

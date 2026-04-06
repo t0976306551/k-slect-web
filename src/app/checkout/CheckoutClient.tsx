@@ -169,12 +169,15 @@ export default function CheckoutClient() {
             <h2 className="font-jakarta font-semibold text-[#2D2D2D] text-[14px] mb-3">購物清單</h2>
             <div className="space-y-2">
               {cartItems.map((item) => (
-                <div key={item.productId} className="flex justify-between text-[13px]">
-                  <span className="text-[#6B6B6B] line-clamp-1 flex-1">
-                    {item.productName}
-                    <span className="text-[#9E9E9E] ml-1">×{item.quantity}</span>
+                <div key={`${item.productId}::${item.variantId ?? ''}`} className="flex justify-between text-[13px] gap-2">
+                  <span className="text-[#6B6B6B] flex-1 min-w-0">
+                    <span className="line-clamp-1">{item.productName}</span>
+                    {item.variantLabel && (
+                      <span className="block text-[11px] text-[#9E9E9E]">{item.variantLabel}</span>
+                    )}
+                    <span className="text-[#9E9E9E]">×{item.quantity}</span>
                   </span>
-                  <span className="font-medium text-[#2D2D2D] ml-2">
+                  <span className="font-medium text-[#2D2D2D] shrink-0">
                     NT$ {(item.price * item.quantity).toLocaleString('zh-TW')}
                   </span>
                 </div>

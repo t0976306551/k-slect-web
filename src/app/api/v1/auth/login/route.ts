@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // Mock 使用者帳號
 const MOCK_USERS = [
-  { email: 'user@k-slect.com', password: 'password123', name: '測試用戶' },
-  { email: 'test@k-slect.com', password: 'test123', name: 'Test User' },
+  { email: 'user@k-slect.com', password: 'password123', name: '測試用戶', isAdmin: false },
+  { email: 'test@k-slect.com', password: 'test123', name: 'Test User', isAdmin: false },
+  { email: 'admin@k-slect.com', password: 'admin123', name: '管理員', isAdmin: true },
 ]
 
 export async function POST(req: NextRequest) {
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   const token = Buffer.from(
-    JSON.stringify({ id: user.email, exp: Date.now() + 86400_000 }),
+    JSON.stringify({ id: user.email, exp: Date.now() + 86400_000, isAdmin: user.isAdmin }),
   ).toString('base64')
 
   const res = NextResponse.json({

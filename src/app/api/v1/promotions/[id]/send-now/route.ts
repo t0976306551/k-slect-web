@@ -2,14 +2,14 @@
  * POST /api/v1/promotions/[id]/send-now
  *
  * 立即發送推廣訊息（跳過排程），依 platform 呼叫 LINE/FB API。
+ * 推廣資料從後台 API 取得，發送完成後 PATCH 後台更新狀態。
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
-import { AppError, NotFoundError } from '@/lib/errors'
+import { backendRequest } from '@/lib/backend'
 import { broadcastLineMessage } from '@/lib/line'
 import { createPagePost } from '@/lib/facebook'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,12 +21,6 @@ function ok<T>(data: T): NextResponse<ApiSuccess<T>> {
 }
 
 function fail(e: unknown): NextResponse<ApiError> {
-  if (e instanceof AppError) {
-    return NextResponse.json(
-      { data: null, error: { code: e.code, message: e.message } },
-      { status: e.statusCode },
-    )
-  }
   console.error('[promotions/send-now Error]', e)
   return NextResponse.json(
     { data: null, error: { code: 'INTERNAL_ERROR', message: '伺服器內部錯誤' } },
@@ -34,15 +28,19 @@ function fail(e: unknown): NextResponse<ApiError> {
   )
 }
 
-type RouteParams = { params: { id: string } }
-
-/** 依 platform 取得要發送的文案 */
-function resolveCopy(promotion: {
+type PromotionRecord = {
+  id: string
   platform: string
   message: string
-  aiGeneratedCopy: Prisma.JsonValue | null
-}): { lineCopy: string | null; fbCopy: string | null } {
-  const ai = promotion.aiGeneratedCopy as Record<string, string> | null
+  utmUrl: string | null
+  aiGeneratedCopy: Record<string, string> | null
+  metadata: Record<string, unknown> | null
+  status: string
+}
+
+/** 依 platform 取得要發送的文案 */
+function resolveCopy(promotion: PromotionRecord): { lineCopy: string | null; fbCopy: string | null } {
+  const ai = promotion.aiGeneratedCopy
 
   const lineCopy =
     ['line', 'both', 'LINE'].includes(promotion.platform)
@@ -57,23 +55,34 @@ function resolveCopy(promotion: {
   return { lineCopy, fbCopy }
 }
 
-export async function POST(_req: NextRequest, { params }: RouteParams) {
-  try {
-    const promotion = await prisma.promotion.findUnique({
-      where: { id: params.id },
-    })
+type RouteContext = { params: Promise<{ id: string }> }
 
-    if (!promotion) {
-      throw new NotFoundError(`推廣紀錄 ${params.id} 不存在`)
+export async function POST(req: NextRequest, { params }: RouteContext) {
+  const authError = requireAdmin(req)
+  if (authError) return authError
+
+  try {
+    const { id } = await params
+
+    // 從後台取得推廣資料
+    const fetchResult = await backendRequest<PromotionRecord>(`/promotions/${id}`)
+    if (fetchResult.error) {
+      const status = fetchResult.error.code === 'NOT_FOUND' ? 404 : 500
+      return NextResponse.json(fetchResult, { status })
     }
 
-    if (promotion.sendStatus === 'sent') {
-      throw new AppError('此推廣已發送，不可重複發送', 'ALREADY_SENT', 422)
+    const promotion = fetchResult.data
+
+    if (promotion.status === 'sent') {
+      return NextResponse.json(
+        { data: null, error: { code: 'ALREADY_SENT', message: '此推廣已發送，不可重複發送' } },
+        { status: 422 },
+      )
     }
 
     const { lineCopy, fbCopy } = resolveCopy(promotion)
     const errors: string[] = []
-    const metadata = (promotion.metadata as Record<string, unknown>) ?? {}
+    const metadata = promotion.metadata ?? {}
 
     // 發送 LINE 廣播
     if (lineCopy) {
@@ -111,31 +120,35 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
     const allFailed = errors.length > 0 && !lineCopy && !fbCopy
     const partialFail = errors.length > 0 && (lineCopy || fbCopy)
 
-    const updated = await prisma.promotion.update({
-      where: { id: params.id },
-      data: {
+    // 更新後台狀態
+    const patchResult = await backendRequest<PromotionRecord>(`/promotions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
         status: errors.length === 0 || partialFail ? 'sent' : 'failed',
-        sendStatus: errors.length === 0 ? 'sent' : allFailed ? 'failed' : 'sent',
-        sentAt: new Date(),
+        sentAt: new Date().toISOString(),
         scheduledAt: null,
         metadata: {
           ...metadata,
           last_error: errors.length > 0 ? errors.join('; ') : undefined,
-        } as Prisma.InputJsonValue,
-      },
+        },
+      }),
     })
+
+    if (patchResult.error) {
+      return NextResponse.json(patchResult, { status: 500 })
+    }
 
     if (errors.length > 0) {
       return NextResponse.json(
         {
-          data: updated,
+          data: patchResult.data,
           error: { code: 'PARTIAL_FAILURE', message: `部分發送失敗：${errors.join('; ')}` },
         },
         { status: 207 },
       )
     }
 
-    return ok(updated)
+    return ok(patchResult.data)
   } catch (e) {
     return fail(e)
   }

@@ -1,61 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
-import { AppError, NotFoundError, ValidationError } from '@/lib/errors'
+import { backendRequest } from '@/lib/backend'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-type ApiSuccess<T> = { data: T; error: null }
-type ApiError = { data: null; error: { code: string; message: string } }
+type RouteContext = { params: Promise<{ id: string }> }
 
-function ok<T>(data: T, status = 200): NextResponse<ApiSuccess<T>> {
-  return NextResponse.json({ data, error: null }, { status })
-}
+const patchCustomerSchema = z.object({
+  status: z.enum(['active', 'inactive', 'blacklisted', 'vip']).optional(),
+  tags: z.array(z.string()).optional(),
+  note: z.string().nullable().optional(),
+})
 
-function fail(e: unknown): NextResponse<ApiError> {
-  if (e instanceof AppError) {
+export async function PATCH(req: NextRequest, { params }: RouteContext) {
+  const authError = requireAdmin(req)
+  if (authError) return authError
+
+  const { id } = await params
+  const raw: unknown = await req.json().catch(() => null)
+  const parsed = patchCustomerSchema.safeParse(raw)
+  if (!parsed.success) {
     return NextResponse.json(
-      { data: null, error: { code: e.code, message: e.message } },
-      { status: e.statusCode },
+      { data: null, error: { code: 'VALIDATION_ERROR', message: parsed.error.issues.map((i) => i.message).join('; ') } },
+      { status: 400 },
     )
   }
-  console.error('[API Error]', e)
-  return NextResponse.json(
-    { data: null, error: { code: 'INTERNAL_ERROR', message: '伺服器內部錯誤' } },
-    { status: 500 },
-  )
-}
 
-const patchCustomerSchema = z
-  .object({
-    status: z.enum(['active', 'blacklisted', 'vip']),
-    tags: z.array(z.string()),
-    note: z.string().nullable(),
+  const result = await backendRequest(`/members/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(parsed.data),
   })
-  .partial()
-
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  try {
-    const body: unknown = await req.json()
-    const result = patchCustomerSchema.safeParse(body)
-    if (!result.success) {
-      throw new ValidationError(result.error.message)
-    }
-
-    const existing = await prisma.customer.findUnique({ where: { id: params.id } })
-    if (!existing) throw new NotFoundError(`顧客 ${params.id}`)
-
-    const customer = await prisma.customer.update({
-      where: { id: params.id },
-      data: result.data,
-      include: { _count: { select: { orders: true } } },
-    })
-
-    return ok(customer)
-  } catch (e) {
-    return fail(e)
-  }
+  const status = result.error?.code === 'NOT_FOUND' ? 404 : result.error ? 500 : 200
+  return NextResponse.json(result, { status })
 }

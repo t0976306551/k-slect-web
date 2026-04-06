@@ -7,29 +7,19 @@
     "build": "next build",
     "start": "next start -p 7432",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
-    "@prisma/adapter-pg": "^7.6.0",
-    "@prisma/client": "^7.6.0",
     "autoprefixer": "^10.4.27",
     "lucide-react": "^1.7.0",
     "next": "14.2.35",
-    "pg": "^8.20.0",
-    "prisma": "^7.5.0",
     "react": "^18",
     "react-dom": "^18",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/pg": "^8.18.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8.57.1",

@@ -2,14 +2,14 @@
  * GET /api/v1/cron/send-promotions
  *
  * Vercel Cron Job 端點（每分鐘執行）。
- * 掃描待發送的排程推廣並執行，含樂觀鎖防重複、失敗重試（最多 3 次）。
+ * 掃描待發送的排程推廣並執行，含失敗重試（最多 3 次）。
+ * 推廣資料從後台 API 取得，狀態更新透過後台 API 寫入。
  *
  * 驗證：Authorization: Bearer <CRON_SECRET>
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
+import { backendRequest } from '@/lib/backend'
 import { broadcastLineMessage } from '@/lib/line'
 import { createPagePost } from '@/lib/facebook'
 
@@ -49,13 +49,20 @@ interface SendResult {
   error?: string
 }
 
-/** 依 platform 取得發送文案 */
-function resolveCopy(promotion: {
+type PromotionRecord = {
+  id: string
   platform: string
   message: string
-  aiGeneratedCopy: Prisma.JsonValue | null
-}): { lineCopy: string | null; fbCopy: string | null } {
-  const ai = promotion.aiGeneratedCopy as Record<string, string> | null
+  utmUrl: string | null
+  aiGeneratedCopy: Record<string, string> | null
+  metadata: Record<string, unknown> | null
+  status: string
+  scheduledAt: string | null
+}
+
+/** 依 platform 取得發送文案 */
+function resolveCopy(promotion: PromotionRecord): { lineCopy: string | null; fbCopy: string | null } {
+  const ai = promotion.aiGeneratedCopy
 
   const lineCopy =
     ['line', 'both', 'LINE'].includes(promotion.platform)
@@ -71,17 +78,10 @@ function resolveCopy(promotion: {
 }
 
 /** 發送單一推廣，回傳成功/失敗訊息 */
-async function sendPromotion(promotion: {
-  id: string
-  platform: string
-  message: string
-  utmUrl: string | null
-  aiGeneratedCopy: Prisma.JsonValue | null
-  metadata: Prisma.JsonValue | null
-}): Promise<SendResult> {
+async function sendPromotion(promotion: PromotionRecord): Promise<SendResult> {
   const { lineCopy, fbCopy } = resolveCopy(promotion)
   const errors: string[] = []
-  const metadata = (promotion.metadata as Record<string, unknown>) ?? {}
+  const metadata = promotion.metadata ?? {}
   const retryCount = (metadata.retry_count as number) ?? 0
 
   if (lineCopy) {
@@ -115,14 +115,13 @@ async function sendPromotion(promotion: {
 
   if (errors.length === 0) {
     // 全部成功
-    await prisma.promotion.update({
-      where: { id: promotion.id },
-      data: {
+    await backendRequest(`/promotions/${promotion.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
         status: 'sent',
-        sendStatus: 'sent',
-        sentAt: new Date(),
-        metadata: metadata as Prisma.InputJsonValue,
-      },
+        sentAt: new Date().toISOString(),
+        metadata,
+      }),
     })
     return { id: promotion.id, status: 'sent' }
   }
@@ -132,36 +131,36 @@ async function sendPromotion(promotion: {
 
   if (nextRetry >= MAX_RETRY) {
     // 重試次數耗盡 → 標記失敗
-    await prisma.promotion.update({
-      where: { id: promotion.id },
-      data: {
+    await backendRequest(`/promotions/${promotion.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
         status: 'failed',
-        sendStatus: 'failed',
         metadata: {
           ...metadata,
           retry_count: nextRetry,
           last_error: errorMsg,
-        } as Prisma.InputJsonValue,
-      },
+        },
+      }),
     })
     return { id: promotion.id, status: 'failed', error: errorMsg }
   }
 
   // 安排下次重試（+5分鐘）
-  await prisma.promotion.update({
-    where: { id: promotion.id },
-    data: {
-      scheduledAt: new Date(Date.now() + RETRY_INTERVAL_MS),
-      sendStatus: 'pending',
+  await backendRequest(`/promotions/${promotion.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      scheduledAt: new Date(Date.now() + RETRY_INTERVAL_MS).toISOString(),
       metadata: {
         ...metadata,
         retry_count: nextRetry,
         last_error: errorMsg,
-      } as Prisma.InputJsonValue,
-    },
+      },
+    }),
   })
   return { id: promotion.id, status: 'retry', error: errorMsg }
 }
+
+type PromotionListResponse = { promotions: PromotionRecord[]; total: number }
 
 export async function GET(req: NextRequest) {
   try {
@@ -175,35 +174,19 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const now = new Date()
+    // 取得待發送的排程推廣
+    const now = new Date().toISOString()
+    const fetchResult = await backendRequest<PromotionListResponse>(
+      `/promotions?status=scheduled&scheduledBefore=${encodeURIComponent(now)}&limit=${BATCH_SIZE}`,
+    )
 
-    // 使用 updateMany 進行樂觀鎖：同時將符合條件的推廣標記為 in-process
-    // 策略：先查詢，再在單一交易內更新 + 發送
-    const pending = await prisma.promotion.findMany({
-      where: {
-        status: 'scheduled',
-        sendStatus: 'pending',
-        scheduledAt: { lte: now },
-      },
-      orderBy: { scheduledAt: 'asc' },
-      take: BATCH_SIZE,
-    })
-
-    if (pending.length === 0) {
-      return ok({ processed: 0, results: [] })
+    if (fetchResult.error) {
+      return NextResponse.json(fetchResult, { status: 500 })
     }
 
-    // 樂觀鎖：先鎖定（sendStatus 改成特殊狀態避免其他 cron 重複抓取）
-    const ids = pending.map((p) => p.id)
-    const locked = await prisma.promotion.updateMany({
-      where: {
-        id: { in: ids },
-        sendStatus: 'pending', // 只鎖還是 pending 的（防 race）
-      },
-      data: { sendStatus: 'failed' }, // 暫時標記為失敗，成功後再改 sent
-    })
+    const pending = fetchResult.data.promotions
 
-    if (locked.count === 0) {
+    if (pending.length === 0) {
       return ok({ processed: 0, results: [] })
     }
 

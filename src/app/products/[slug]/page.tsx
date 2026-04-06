@@ -24,19 +24,13 @@ const getProduct = cache(async (idOrSlug: string) => {
       category: null as { name: string; slug: string | null } | null,
     }
   }
-  const { prisma } = await import('@/lib/prisma')
-  const where = isCuid(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }
-  return prisma.product.findUnique({
-    where,
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      description: true,
-      price: true,
-      category: { select: { name: true, slug: true } },
-    },
-  })
+  const { storefrontRequest } = await import('@/lib/backend')
+  const res = await storefrontRequest<{
+    id: string; slug: string | null; name: string; description: string | null; price: number;
+    category?: { name: string; slug: string | null } | null
+  }>(`/products/${idOrSlug}`)
+  if (res.error || !res.data) return null
+  return res.data
 })
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -76,14 +70,11 @@ export default async function ProductDetailPage({ params }: Props) {
 
   // 舊 cuid URL → 永久 redirect 到 slug URL（mock 模式下跳過）
   if (!USE_MOCK && isCuid(slug)) {
-    const { prisma } = await import('@/lib/prisma')
-    const product = await prisma.product.findUnique({
-      where: { id: slug },
-      select: { slug: true },
-    })
-    if (!product) notFound()
-    if (product.slug) {
-      permanentRedirect(`/products/${product.slug}`)
+    const { storefrontRequest } = await import('@/lib/backend')
+    const res = await storefrontRequest<{ slug: string | null }>(`/products/${slug}`)
+    if (!res.data) notFound()
+    if (res.data.slug) {
+      permanentRedirect(`/products/${res.data.slug}`)
     }
   }
 

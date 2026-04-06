@@ -42,27 +42,30 @@ interface OrderDetail {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "待確認",
-  confirmed: "已確認",
+  pending_ship: "待出貨",
   shipped: "出貨中",
   completed: "已完成",
   cancelled: "已取消",
+  refund_pending: "退款申請中",
+  refunded: "已退款",
 };
 
 const STATUS_BG: Record<string, string> = {
-  pending: "#FFF3E0",
-  confirmed: "#EBF1E8",
+  pending_ship: "#FFF3E0",
   shipped: "#E8F0E5",
   completed: "#F0F0F0",
   cancelled: "#FBE9E7",
+  refund_pending: "#FFF8E1",
+  refunded: "#F3E5F5",
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  pending: "#FF9800",
-  confirmed: "#7C9070",
+  pending_ship: "#FF9800",
   shipped: "#5C7A52",
   completed: "#6B6B6B",
   cancelled: "#D4845E",
+  refund_pending: "#F9A825",
+  refunded: "#7B1FA2",
 };
 
 const PAYMENT_LABEL: Record<string, string> = {

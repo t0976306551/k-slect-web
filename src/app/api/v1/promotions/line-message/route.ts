@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
+import { storefrontRequest } from '@/lib/backend'
 import { buildLineMessage, buildMultiProductLineMessage, type ProductInfo } from '@/lib/line'
 import { AppError, NotFoundError, ValidationError } from '@/lib/errors'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,6 +32,14 @@ const lineMessageSchema = z.object({
   productIds: z.array(z.string().min(1)).min(1, '至少需要一個商品 ID'),
 })
 
+type ProductData = {
+  id: string
+  name: string
+  price: number
+  description: string | null
+  status: string
+}
+
 /**
  * POST /api/v1/promotions/line-message
  *
@@ -44,6 +53,9 @@ const lineMessageSchema = z.object({
  *   { text: string, productUrl: string, products: ProductInfo[] }
  */
 export async function POST(req: NextRequest) {
+  const authError = requireAdmin(req)
+  if (authError) return authError
+
   try {
     const body = await req.json() as unknown
     const parsed = lineMessageSchema.safeParse(body)
@@ -54,12 +66,14 @@ export async function POST(req: NextRequest) {
 
     const { productIds } = parsed.data
 
-    const dbProducts = await prisma.product.findMany({
-      where: { id: { in: productIds }, status: 'active' },
-      include: {
-        inventory: { select: { sku: true, quantity: true } },
-      },
-    })
+    // 逐一查詢商品（storefront 端點通常不支援 IN 查詢，改為並行查詢）
+    const productResults = await Promise.all(
+      productIds.map((id) => storefrontRequest<ProductData>(`/products/${id}`)),
+    )
+
+    const dbProducts = productResults
+      .filter((r) => !r.error && r.data?.status === 'active')
+      .map((r) => r.data!)
 
     if (dbProducts.length === 0) {
       throw new NotFoundError('找不到指定的商品，請確認商品 ID 及上架狀態')

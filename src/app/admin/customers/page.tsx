@@ -5,12 +5,14 @@ import type { Customer, CustomerStatus } from '@/types'
 
 const STATUS_LABEL: Record<CustomerStatus, string> = {
   active: '正常',
+  inactive: '停用',
   blacklisted: '黑名單',
   vip: 'VIP',
 }
 
 const STATUS_CLASS: Record<CustomerStatus, string> = {
   active: 'bg-green-100 text-green-800',
+  inactive: 'bg-gray-100 text-gray-800',
   blacklisted: 'bg-red-100 text-red-800',
   vip: 'bg-yellow-100 text-yellow-800',
 }

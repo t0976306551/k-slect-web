@@ -9,9 +9,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
+import { storefrontRequest } from '@/lib/backend'
 import { AppError, NotFoundError, ValidationError } from '@/lib/errors'
 import { createPagePost, createCarouselPost } from '@/lib/facebook'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,7 +52,18 @@ const fbPostSchema = z.object({
   scheduledAt: z.string().datetime().optional(),
 })
 
+type ProductData = {
+  id: string
+  name: string
+  price: number
+  description: string | null
+  status: string
+}
+
 export async function POST(req: NextRequest) {
+  const authError = requireAdmin(req)
+  if (authError) return authError
+
   try {
     const body: unknown = await req.json()
     const result = fbPostSchema.safeParse(body)
@@ -61,10 +73,13 @@ export async function POST(req: NextRequest) {
 
     const { pageId, pageAccessToken, productIds, message, scheduledAt } = result.data
 
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds }, status: 'active' },
-      select: { id: true, name: true, price: true, description: true },
-    })
+    const productResults = await Promise.all(
+      productIds.map((id) => storefrontRequest<ProductData>(`/products/${id}`)),
+    )
+
+    const products = productResults
+      .filter((r) => !r.error && r.data?.status === 'active')
+      .map((r) => r.data!)
 
     if (products.length === 0) {
       throw new NotFoundError('找不到指定商品')
