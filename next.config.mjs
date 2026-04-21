@@ -8,7 +8,9 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
-  serverExternalPackages: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
-};
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
+  },
+}
 
-export default nextConfig;
+export default nextConfig

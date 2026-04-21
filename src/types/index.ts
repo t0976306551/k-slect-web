@@ -101,6 +101,7 @@ export interface Product {
   inventory?: Pick<Inventory, 'sku' | 'quantity' | 'lowStockThreshold'>
   image?: string | null   // images[0]，API 層轉換後加入
   images: string[] | null // 商品圖片 URL 陣列（後台 jsonb nullable）
+  descriptionImages?: string[] | null // 商品說明區塊圖片
   options?: ProductOption[]
   variants?: ProductVariant[]
   createdAt: string

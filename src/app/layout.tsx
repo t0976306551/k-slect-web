@@ -45,7 +45,7 @@ export default function RootLayout({
       </head>
       <body className={`${fraunces.variable} ${jakarta.variable} antialiased min-h-screen bg-[#F7F6F3]`}>
         <Navbar />
-        <main className="pb-20 md:pb-0">{children}</main>
+        <main className="pb-[88px] md:pb-0">{children}</main>
         <TabBar />
       </body>
     </html>

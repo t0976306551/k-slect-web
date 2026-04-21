@@ -7,13 +7,16 @@
     "build": "next build",
     "start": "next start -p 7432",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
     "autoprefixer": "^10.4.27",
     "lucide-react": "^1.7.0",
     "next": "14.2.35",
+    "pg": "^8.20.0",
     "react": "^18",
     "react-dom": "^18",
     "zod": "^4.3.6"
@@ -22,9 +25,11 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "dotenv": "^17.4.2",
     "eslint": "^8.57.1",
-    "eslint-config-next": "^16.2.0",
+    "eslint-config-next": "^14.2.35",
     "postcss": "^8",
+    "prisma": "^7.7.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

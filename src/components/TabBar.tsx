@@ -16,8 +16,8 @@ export default function TabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#F0EFEC] z-50 md:hidden">
-      <div className="flex items-center justify-around h-[54px] pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#F0EFEC] z-50 md:hidden pb-safe">
+      <div className="flex items-center justify-around h-[54px]">
         {tabs.map(({ href, label, Icon }) => {
           const isActive = pathname === href || (href !== "/" && (pathname ?? "").startsWith(href));
           return (
