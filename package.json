@@ -6,6 +6,7 @@
     "dev": "next dev -p 7432",
     "build": "next build",
     "start": "next start -p 7432",
+    "test": "vitest run",
     "lint": "next lint",
     "typecheck": "tsc --noEmit --incremental false"
   },
@@ -25,12 +26,14 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitest/coverage-v8": "^4.1.5",
     "dotenv": "^17.4.2",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.35",
     "postcss": "^8",
     "prisma": "^7.7.0",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.5"
   }
 }

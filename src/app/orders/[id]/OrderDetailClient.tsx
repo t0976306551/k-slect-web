@@ -12,14 +12,25 @@ import {
   Phone,
   User,
   Landmark,
+  Store,
   AlertCircle,
 } from "lucide-react";
+import { getMerchantBankAccount } from "@/lib/merchant";
+import { fetchBankTransferReport } from "@/lib/api";
+import type { BankTransferSnapshot, BankTransferReport } from "@/types";
 
 interface OrderItem {
   id: string;
   quantity: number;
   priceAtOrder: number;
   product: { id: string; name: string; slug?: string | null };
+}
+
+interface PickupStoreInfo {
+  provider?: string;
+  storeCode?: string;
+  storeName?: string;
+  storeAddress?: string;
 }
 
 interface OrderDetail {
@@ -31,6 +42,11 @@ interface OrderDetail {
   note: string | null;
   createdAt: string;
   updatedAt: string;
+  shippingMethod?: string | null;
+  shippingProvider?: string | null;
+  pickupStore?: PickupStoreInfo | null;
+  trackingNo?: string | null;
+  bankTransferInfoSnapshot?: BankTransferSnapshot | null;
   customer: {
     id: string;
     name: string;
@@ -69,8 +85,31 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const PAYMENT_LABEL: Record<string, string> = {
-  bank_transfer: "銀行轉帳",
+  bank_transfer: "銀行匯款",
   seller_ship: "貨到付款",
+};
+
+const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  pending: "待付款",
+  paid: "已付款",
+  failed: "付款失敗",
+};
+
+const PAYMENT_STATUS_COLOR: Record<string, { bg: string; fg: string }> = {
+  pending: { bg: "#FFF3E0", fg: "#E08020" },
+  paid: { bg: "#E8F0E5", fg: "#5C7A52" },
+  failed: { bg: "#FBE9E7", fg: "#D4845E" },
+};
+
+const SHIPPING_METHOD_LABEL: Record<string, string> = {
+  cvs_pickup: "超商取貨",
+  home_delivery: "宅配到府",
+};
+
+const SHIPPING_PROVIDER_LABEL: Record<string, string> = {
+  seven_eleven: "7-11",
+  family_mart: "全家",
+  black_cat: "黑貓宅急便",
 };
 
 const PROGRESS_STEPS = [
@@ -202,6 +241,7 @@ export default function OrderDetailClient() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [bankReport, setBankReport] = useState<BankTransferReport | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -213,6 +253,13 @@ export default function OrderDetailClient() {
       })
       .catch(() => setError("載入失敗，請稍後再試"))
       .finally(() => setLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchBankTransferReport(id).then((res) => {
+      if (res.data) setBankReport(res.data);
+    });
   }, [id]);
 
   if (loading) return <DetailSkeleton />;
@@ -379,6 +426,34 @@ export default function OrderDetailClient() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center px-5 py-3">
+                  <span className="text-[12px] text-[#9E9E9E]">付款狀態</span>
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full font-medium"
+                    style={{
+                      background: PAYMENT_STATUS_COLOR[order.paymentStatus]?.bg ?? "#F0F0F0",
+                      color: PAYMENT_STATUS_COLOR[order.paymentStatus]?.fg ?? "#6B6B6B",
+                    }}
+                  >
+                    {PAYMENT_STATUS_LABEL[order.paymentStatus] ?? order.paymentStatus}
+                  </span>
+                </div>
+                {order.shippingMethod && (
+                  <div className="flex justify-between items-center px-5 py-3">
+                    <span className="text-[12px] text-[#9E9E9E]">配送方式</span>
+                    <span className="text-[12px] font-medium text-[#2D2D2D]">
+                      {SHIPPING_METHOD_LABEL[order.shippingMethod] ?? order.shippingMethod}
+                      {order.shippingProvider &&
+                        ` · ${SHIPPING_PROVIDER_LABEL[order.shippingProvider] ?? order.shippingProvider}`}
+                    </span>
+                  </div>
+                )}
+                {order.trackingNo && (
+                  <div className="flex justify-between items-center px-5 py-3">
+                    <span className="text-[12px] text-[#9E9E9E]">追蹤編號</span>
+                    <span className="text-[12px] font-mono text-[#2D2D2D]">{order.trackingNo}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center px-5 py-3">
                   <span className="text-[12px] text-[#9E9E9E]">訂單金額</span>
                   <span className="text-[13px] font-bold text-[#7C9070] tabular-nums">
                     NT$ {order.totalAmount.toLocaleString("zh-TW")}
@@ -388,21 +463,46 @@ export default function OrderDetailClient() {
             </div>
 
             {/* Bank transfer info */}
-            {order.paymentMethod === "bank_transfer" && (
+            {order.paymentMethod === "bank_transfer" && (() => {
+              const bank = order.bankTransferInfoSnapshot ?? getMerchantBankAccount();
+              const hasReport = !!bankReport;
+              const isPending = order.paymentStatus === "pending";
+              return (
               <div className="bg-[#7C9070]/5 border border-[#7C9070]/15 rounded-[16px] p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Landmark size={14} className="text-[#7C9070]" />
-                  <span className="text-[12px] font-semibold text-[#7C9070]">銀行轉帳資訊</span>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Landmark size={14} className="text-[#7C9070]" />
+                    <span className="text-[12px] font-semibold text-[#7C9070]">銀行匯款資訊</span>
+                  </div>
+                  {isPending && hasReport ? (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#FFF8E1] text-[#D4A020] font-medium">
+                      待商家對帳
+                    </span>
+                  ) : isPending ? (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#FFF3E0] text-[#E08020] font-medium">
+                      待付款
+                    </span>
+                  ) : null}
                 </div>
                 <div className="space-y-2 text-[12px]">
                   <div className="flex justify-between">
                     <span className="text-[#9E9E9E]">銀行</span>
-                    <span className="font-medium text-[#2D2D2D]">玉山銀行 (808)</span>
+                    <span className="font-medium text-[#2D2D2D]">
+                      {bank.bankName} ({bank.bankCode})
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#9E9E9E]">分行</span>
+                    <span className="font-medium text-[#2D2D2D]">{bank.branchName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#9E9E9E]">戶名</span>
+                    <span className="font-medium text-[#2D2D2D]">{bank.accountName}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#9E9E9E]">帳號</span>
                     <span className="font-medium text-[#2D2D2D] font-mono tracking-wide">
-                      1234-5678-9012
+                      {bank.accountNumber}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -411,9 +511,26 @@ export default function OrderDetailClient() {
                       NT$ {order.totalAmount.toLocaleString("zh-TW")}
                     </span>
                   </div>
+                  {hasReport && bankReport && (
+                    <div className="flex justify-between border-t border-[#7C9070]/15 pt-2 mt-2">
+                      <span className="text-[#9E9E9E]">已回報末五碼</span>
+                      <span className="font-mono font-semibold text-[#7C9070]">
+                        {bankReport.last5}
+                      </span>
+                    </div>
+                  )}
                 </div>
+                {isPending && (
+                  <Link
+                    href={`/checkout/bank-transfer?orderId=${order.id}&total=${order.totalAmount}`}
+                    className="mt-4 flex items-center justify-center gap-1 bg-[#7C9070] hover:bg-[#6a7d5f] text-white text-[13px] font-medium py-2.5 rounded-[10px] transition-colors"
+                  >
+                    {hasReport ? "查看匯款資訊" : "前往回報匯款"}
+                  </Link>
+                )}
               </div>
-            )}
+              );
+            })()}
 
             {/* Recipient info */}
             <div className="bg-white rounded-[16px] border border-[#F0EFEC] overflow-hidden">
@@ -433,13 +550,25 @@ export default function OrderDetailClient() {
                     <span className="text-[13px] text-[#2D2D2D]">{order.customer.phone}</span>
                   </div>
                 )}
-                {order.customer.address && (
+                {order.shippingMethod === "cvs_pickup" && order.pickupStore?.storeName ? (
                   <div className="flex items-start gap-2.5">
-                    <MapPin size={13} className="text-[#C8C8C8] mt-0.5 shrink-0" />
+                    <Store size={13} className="text-[#C8C8C8] mt-0.5 shrink-0" />
                     <span className="text-[13px] text-[#2D2D2D] leading-relaxed">
-                      {order.customer.address}
+                      {SHIPPING_PROVIDER_LABEL[order.pickupStore.provider ?? ""] ?? ""}
+                      {order.pickupStore.provider ? " · " : ""}
+                      {order.pickupStore.storeName}
+                      {order.pickupStore.storeCode && ` (${order.pickupStore.storeCode})`}
                     </span>
                   </div>
+                ) : (
+                  order.customer.address && (
+                    <div className="flex items-start gap-2.5">
+                      <MapPin size={13} className="text-[#C8C8C8] mt-0.5 shrink-0" />
+                      <span className="text-[13px] text-[#2D2D2D] leading-relaxed">
+                        {order.customer.address}
+                      </span>
+                    </div>
+                  )
                 )}
               </div>
             </div>

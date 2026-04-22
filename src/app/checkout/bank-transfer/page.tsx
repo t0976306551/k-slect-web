@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { Check, Copy } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { getMerchantBankAccount } from "@/lib/merchant";
+import BankTransferReportForm from "./BankTransferReportForm";
 
 interface PageProps {
-  searchParams: Promise<{ orderId?: string }>;
+  searchParams: Promise<{ orderId?: string; total?: string }>;
 }
 
 export default async function BankTransferPage({ searchParams }: PageProps) {
-  const { orderId } = await searchParams;
+  const { orderId, total: totalParam } = await searchParams;
   const displayOrderId = orderId ?? "ORD-XXXXXXX";
-  const accountNumber = "012-3456-7890123";
+  const account = getMerchantBankAccount();
+  const total = parseInt(totalParam ?? "0");
 
   return (
     <div className="min-h-screen bg-[#F7F6F3]">
@@ -46,19 +49,26 @@ export default async function BankTransferPage({ searchParams }: PageProps) {
           <div className="grid grid-cols-2 gap-4 mb-5">
             <div>
               <p className="text-[12px] text-[#9E9E9E] mb-1">銀行名稱</p>
-              <p className="text-[15px] font-semibold text-[#2D2D2D]">台灣銀行</p>
+              <p className="text-[15px] font-semibold text-[#2D2D2D]">
+                {account.bankName} ({account.bankCode})
+              </p>
             </div>
             <div>
-              <p className="text-[12px] text-[#9E9E9E] mb-1">帳號分行</p>
-              <p className="text-[15px] font-semibold text-[#2D2D2D]">板橋分行</p>
+              <p className="text-[12px] text-[#9E9E9E] mb-1">分行</p>
+              <p className="text-[15px] font-semibold text-[#2D2D2D]">{account.branchName}</p>
             </div>
           </div>
 
           <div className="mb-5">
             <p className="text-[12px] text-[#9E9E9E] mb-1">帳號</p>
             <div className="flex items-center gap-3">
-              <p className="text-[18px] font-bold text-[#2D2D2D] tracking-wide">{accountNumber}</p>
-              <button className="flex items-center gap-1.5 text-[#7C9070] text-[12px] font-medium border border-[#7C9070] rounded-lg px-2.5 py-1 hover:bg-[#7C9070]/5 transition-colors">
+              <p className="text-[18px] font-bold text-[#2D2D2D] tracking-wide">
+                {account.accountNumber}
+              </p>
+              <button
+                onClick={() => navigator.clipboard.writeText(account.accountNumber)}
+                className="flex items-center gap-1.5 text-[#7C9070] text-[12px] font-medium border border-[#7C9070] rounded-lg px-2.5 py-1 hover:bg-[#7C9070]/5 transition-colors"
+              >
                 <Copy size={12} />
                 複製
               </button>
@@ -67,8 +77,17 @@ export default async function BankTransferPage({ searchParams }: PageProps) {
 
           <div>
             <p className="text-[12px] text-[#9E9E9E] mb-1">戶名</p>
-            <p className="text-[15px] font-semibold text-[#2D2D2D]">K-slect 國際貿易股份有限公司</p>
+            <p className="text-[15px] font-semibold text-[#2D2D2D]">{account.accountName}</p>
           </div>
+
+          {total > 0 && (
+            <div className="mt-5 flex items-center justify-between bg-[#7C9070]/5 border border-[#7C9070]/20 rounded-[10px] px-4 py-3">
+              <span className="text-[12px] text-[#6B6B6B]">應匯款金額</span>
+              <span className="text-[18px] font-bold text-[#7C9070] tabular-nums">
+                NT$ {total.toLocaleString("zh-TW")}
+              </span>
+            </div>
+          )}
 
           {/* Warning */}
           <div className="mt-5 flex gap-2.5 bg-[#FFF8F5] border border-[#D4845E]/30 rounded-[10px] p-3.5">
@@ -76,15 +95,18 @@ export default async function BankTransferPage({ searchParams }: PageProps) {
               <span className="text-white text-[10px] font-bold">!</span>
             </div>
             <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
-              請在下單後 24 小時內完成轉帳，逾時訂單將自動取消。轉帳後請保留轉帳收據。
+              請在下單後 {account.paymentDeadlineHours} 小時內完成轉帳，逾時訂單將自動取消。轉帳後請保留轉帳收據。
             </p>
           </div>
         </div>
 
+        {/* Report form */}
+        <BankTransferReportForm orderId={displayOrderId} />
+
         {/* Action Buttons */}
         <div className="flex gap-3 mt-6">
           <Link
-            href={`/checkout/success?orderId=${displayOrderId}`}
+            href={`/checkout/success?orderId=${displayOrderId}${total > 0 ? `&total=${total}` : ''}`}
             className="flex-1 flex items-center justify-center bg-[#7C9070] text-white text-[15px] font-semibold py-3.5 rounded-[10px] hover:bg-[#6B7F60] transition-colors"
           >
             我已完成轉帳

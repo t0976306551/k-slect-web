@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, Store, AlertCircle } from 'lucide-react'
+import { ChevronRight, Landmark, Truck, Store, AlertCircle } from 'lucide-react'
 import { getCart, getCartTotal, clearCart } from '@/lib/cart'
-import { createOrder } from '@/lib/api'
+import { createOrder, fetchAccountProfile } from '@/lib/api'
+import { getMerchantBankAccount } from '@/lib/merchant'
 import type { CartItem } from '@/lib/cart'
+import type { PaymentMethod, ShippingMethod, ShippingProvider } from '@/types'
 
 interface FormState {
   customerName: string
@@ -14,6 +16,11 @@ interface FormState {
   customerPhone: string
   customerAddress: string
   note: string
+  paymentMethod: PaymentMethod
+  shippingMethod: ShippingMethod
+  shippingProvider: ShippingProvider
+  pickupStoreCode: string
+  pickupStoreName: string
 }
 
 const INITIAL_FORM: FormState = {
@@ -22,7 +29,17 @@ const INITIAL_FORM: FormState = {
   customerPhone: '',
   customerAddress: '',
   note: '',
+  paymentMethod: 'bank_transfer',
+  shippingMethod: 'cvs_pickup',
+  shippingProvider: 'seven_eleven',
+  pickupStoreCode: '',
+  pickupStoreName: '',
 }
+
+const CVS_PROVIDERS: { value: ShippingProvider; label: string; desc: string }[] = [
+  { value: 'seven_eleven', label: '7-11', desc: '統一超商取貨' },
+  { value: 'family_mart', label: '全家', desc: '全家便利商店取貨' },
+]
 
 export default function CheckoutClient() {
   const router = useRouter()
@@ -38,19 +55,72 @@ export default function CheckoutClient() {
       return
     }
     setCartItems(items)
+
+    // 1) 先以 localStorage email 預填（未登入也能用）
     const savedEmail = localStorage.getItem('customer_email')
-    if (savedEmail) {
-      setForm((prev) => ({ ...prev, customerEmail: savedEmail }))
-    }
+
+    // 2) 已登入則嘗試載入會員 profile，覆蓋對應欄位
+    let active = true
+    fetchAccountProfile()
+      .then((res) => {
+        if (!active) return
+        setForm((prev) => {
+          const next = { ...prev }
+          if (savedEmail && !next.customerEmail) next.customerEmail = savedEmail
+          if (res.data) {
+            const p = res.data
+            if (!next.customerName && p.name) next.customerName = p.name
+            if (p.email) next.customerEmail = p.email
+            if (!next.customerPhone && p.phone) next.customerPhone = p.phone
+            if (!next.customerAddress && p.address) next.customerAddress = p.address
+            if (p.defaultShippingMethod) next.shippingMethod = p.defaultShippingMethod
+            if (p.defaultShippingProvider) {
+              next.shippingProvider = p.defaultShippingProvider
+            } else if (p.defaultShippingMethod === 'home_delivery') {
+              next.shippingProvider = 'black_cat'
+            }
+          }
+          return next
+        })
+      })
+      .catch(() => {
+        if (!active) return
+        if (savedEmail) {
+          setForm((prev) => ({ ...prev, customerEmail: savedEmail }))
+        }
+      })
+    return () => { active = false }
   }, [router])
 
-  function handleChange(field: keyof FormState, value: string) {
+  function handleChange<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  function handleShippingMethodChange(method: ShippingMethod) {
+    setForm((prev) => ({
+      ...prev,
+      shippingMethod: method,
+      shippingProvider:
+        method === 'home_delivery'
+          ? 'black_cat'
+          : prev.shippingProvider === 'black_cat'
+            ? 'seven_eleven'
+            : prev.shippingProvider,
+    }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (cartItems.length === 0) return
+
+    if (form.shippingMethod === 'cvs_pickup' && !form.pickupStoreName.trim()) {
+      setSubmitError('請填寫取貨門市')
+      return
+    }
+    if (form.shippingMethod === 'home_delivery' && !form.customerAddress.trim()) {
+      setSubmitError('請填寫收件地址')
+      return
+    }
 
     setSubmitting(true)
     setSubmitError(null)
@@ -60,8 +130,24 @@ export default function CheckoutClient() {
         customerName: form.customerName,
         customerEmail: form.customerEmail,
         customerPhone: form.customerPhone || undefined,
-        customerAddress: form.customerAddress,
-        paymentMethod: 'seller_ship',
+        customerAddress:
+          form.shippingMethod === 'home_delivery'
+            ? form.customerAddress
+            : `${form.pickupStoreName}（${form.pickupStoreCode || '門市代碼未填'}）`,
+        paymentMethod: form.paymentMethod,
+        shippingMethod: form.shippingMethod,
+        shippingProvider: form.shippingProvider,
+        pickupStore:
+          form.shippingMethod === 'cvs_pickup' &&
+          (form.shippingProvider === 'seven_eleven' || form.shippingProvider === 'family_mart')
+            ? {
+                provider: form.shippingProvider,
+                storeCode: form.pickupStoreCode,
+                storeName: form.pickupStoreName,
+              }
+            : null,
+        bankTransferInfoSnapshot:
+          form.paymentMethod === 'bank_transfer' ? getMerchantBankAccount() : undefined,
         note: form.note || undefined,
         items: cartItems.map((item) => ({
           productId: item.productId,
@@ -76,7 +162,15 @@ export default function CheckoutClient() {
         localStorage.setItem('customer_email', form.customerEmail)
         const id = res.data?.id ?? ''
         const total = res.data?.totalAmount ?? getCartTotal(cartItems)
-        router.replace(`/checkout/success?orderId=${encodeURIComponent(id)}&total=${total}`)
+        if (form.paymentMethod === 'bank_transfer') {
+          router.replace(
+            `/checkout/bank-transfer?orderId=${encodeURIComponent(id)}&total=${total}`,
+          )
+        } else {
+          router.replace(
+            `/checkout/success?orderId=${encodeURIComponent(id)}&total=${total}`,
+          )
+        }
       }
     } catch {
       setSubmitError('下單失敗，請稍後再試或聯繫客服')
@@ -91,6 +185,8 @@ export default function CheckoutClient() {
     'w-full border border-[#E8E8E8] bg-white rounded-[10px] px-4 py-3 text-[14px] text-[#2D2D2D] placeholder:text-[#C8C8C8] focus:outline-none focus:border-[#7C9070] focus:ring-2 focus:ring-[#7C9070]/10 transition-all'
   const labelCls =
     'block text-[11px] font-medium tracking-[0.05em] uppercase text-[#9E9E9E] mb-2'
+
+  const isCvs = form.shippingMethod === 'cvs_pickup'
 
   return (
     <>
@@ -113,9 +209,9 @@ export default function CheckoutClient() {
         <div className="md:grid md:grid-cols-[1fr_340px] md:gap-8 md:items-start">
           {/* Left: form */}
           <form id="checkout-form" onSubmit={handleSubmit} className="space-y-4">
-            {/* Shipping info */}
+            {/* Contact info */}
             <div className="bg-white rounded-[16px] border border-[#F0EFEC] p-5 md:p-6 space-y-4">
-              <h2 className="font-fraunces font-medium text-[17px] text-[#2D2D2D]">收件資訊</h2>
+              <h2 className="font-fraunces font-medium text-[17px] text-[#2D2D2D]">聯絡資訊</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -132,9 +228,12 @@ export default function CheckoutClient() {
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>手機號碼</label>
+                  <label className={labelCls}>
+                    手機號碼 <span className="text-[#D4845E]">*</span>
+                  </label>
                   <input
                     type="tel"
+                    required
                     value={form.customerPhone}
                     onChange={(e) => handleChange('customerPhone', e.target.value)}
                     className={inputCls}
@@ -156,20 +255,118 @@ export default function CheckoutClient() {
                   placeholder="example@email.com"
                 />
               </div>
+            </div>
 
-              <div>
-                <label className={labelCls}>
-                  收件地址 <span className="text-[#D4845E]">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.customerAddress}
-                  onChange={(e) => handleChange('customerAddress', e.target.value)}
-                  className={inputCls}
-                  placeholder="台北市信義區..."
-                />
+            {/* Shipping method */}
+            <div className="bg-white rounded-[16px] border border-[#F0EFEC] p-5 md:p-6 space-y-4">
+              <h2 className="font-fraunces font-medium text-[17px] text-[#2D2D2D]">配送方式</h2>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleShippingMethodChange('cvs_pickup')}
+                  className={`flex items-center gap-3 rounded-[12px] p-4 border-2 transition-all text-left ${
+                    isCvs
+                      ? 'border-[#7C9070] bg-[#7C9070]/5'
+                      : 'border-[#E8E8E8] bg-white hover:border-[#C8C8C8]'
+                  }`}
+                >
+                  <div className="w-9 h-9 rounded-full bg-[#F7F6F3] flex items-center justify-center shrink-0">
+                    <Store size={17} className="text-[#7C9070]" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-jakarta font-medium text-[14px] text-[#2D2D2D]">超商取貨</div>
+                    <div className="text-[11px] text-[#9E9E9E] mt-0.5">7-11 / 全家</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleShippingMethodChange('home_delivery')}
+                  className={`flex items-center gap-3 rounded-[12px] p-4 border-2 transition-all text-left ${
+                    !isCvs
+                      ? 'border-[#7C9070] bg-[#7C9070]/5'
+                      : 'border-[#E8E8E8] bg-white hover:border-[#C8C8C8]'
+                  }`}
+                >
+                  <div className="w-9 h-9 rounded-full bg-[#F7F6F3] flex items-center justify-center shrink-0">
+                    <Truck size={17} className="text-[#7C9070]" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-jakarta font-medium text-[14px] text-[#2D2D2D]">宅配到府</div>
+                    <div className="text-[11px] text-[#9E9E9E] mt-0.5">黑貓宅急便</div>
+                  </div>
+                </button>
               </div>
+
+              {isCvs ? (
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <label className={labelCls}>選擇超商</label>
+                    <div className="flex gap-2">
+                      {CVS_PROVIDERS.map((p) => {
+                        const active = form.shippingProvider === p.value
+                        return (
+                          <button
+                            type="button"
+                            key={p.value}
+                            onClick={() => handleChange('shippingProvider', p.value)}
+                            className={`flex-1 rounded-[10px] border px-3 py-2.5 text-[13px] transition-all ${
+                              active
+                                ? 'border-[#7C9070] bg-[#7C9070]/5 text-[#2D2D2D]'
+                                : 'border-[#E8E8E8] bg-white text-[#6B6B6B] hover:border-[#C8C8C8]'
+                            }`}
+                          >
+                            {p.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.6fr] gap-4">
+                    <div>
+                      <label className={labelCls}>門市代碼</label>
+                      <input
+                        type="text"
+                        value={form.pickupStoreCode}
+                        onChange={(e) => handleChange('pickupStoreCode', e.target.value)}
+                        className={inputCls}
+                        placeholder="例：123456"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>
+                        門市名稱 <span className="text-[#D4845E]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.pickupStoreName}
+                        onChange={(e) => handleChange('pickupStoreName', e.target.value)}
+                        className={inputCls}
+                        placeholder="例：松山門市"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-[#9E9E9E] leading-relaxed">
+                    線上門市選擇器整合中，目前請手動填寫常用門市；下單後將以此資訊出貨。
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className={labelCls}>
+                    收件地址 <span className="text-[#D4845E]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={form.customerAddress}
+                    onChange={(e) => handleChange('customerAddress', e.target.value)}
+                    className={inputCls}
+                    placeholder="台北市信義區..."
+                  />
+                </div>
+              )}
             </div>
 
             {/* Payment method */}
@@ -177,13 +374,15 @@ export default function CheckoutClient() {
               <h2 className="font-fraunces font-medium text-[17px] text-[#2D2D2D] mb-4">付款方式</h2>
               <div className="flex items-center gap-3.5 rounded-[12px] p-4 border-2 border-[#7C9070] bg-[#7C9070]/5">
                 <div className="w-9 h-9 rounded-full bg-[#F7F6F3] flex items-center justify-center shrink-0">
-                  <Store size={17} className="text-[#7C9070]" />
+                  <Landmark size={17} className="text-[#7C9070]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-jakarta font-medium text-[14px] text-[#2D2D2D]">
-                    賣貨便取貨付款
+                    銀行匯款 / ATM 轉帳
                   </div>
-                  <div className="text-[12px] text-[#9E9E9E] mt-0.5">7-11 超商取貨，到貨後付款</div>
+                  <div className="text-[12px] text-[#9E9E9E] mt-0.5">
+                    下單後將顯示匯款資訊，請於 24 小時內完成轉帳
+                  </div>
                 </div>
                 <div className="w-4 h-4 rounded-full border-2 border-[#7C9070] flex items-center justify-center shrink-0">
                   <div className="w-2 h-2 rounded-full bg-[#7C9070]" />
@@ -303,4 +502,3 @@ export default function CheckoutClient() {
     </>
   )
 }
-

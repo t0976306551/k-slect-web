@@ -162,6 +162,57 @@ export type OrderStatus =
 export type PaymentMethod = 'seller_ship' | 'bank_transfer'
 export type PaymentStatus = 'pending' | 'paid' | 'failed'
 
+// --- Shipping / Logistics ---
+export type ShippingMethod = 'cvs_pickup' | 'home_delivery'
+export type ShippingProvider = 'seven_eleven' | 'family_mart' | 'black_cat'
+
+export interface PickupStore {
+  provider: Extract<ShippingProvider, 'seven_eleven' | 'family_mart'>
+  storeCode: string
+  storeName: string
+  storeAddress?: string
+}
+
+export interface ShippingInfo {
+  method: ShippingMethod
+  provider: ShippingProvider
+  recipientName: string
+  recipientPhone: string
+  // 宅配時填寫；超商取貨時為 null
+  address?: string | null
+  // 超商取貨時填寫
+  pickupStore?: PickupStore | null
+}
+
+// --- Member Profile（前台登入會員可編輯資料）---
+export interface MemberProfile {
+  name: string
+  email: string
+  phone: string
+  address: string
+  defaultShippingMethod?: ShippingMethod
+  defaultShippingProvider?: ShippingProvider
+}
+
+// --- Bank Transfer Snapshot（下單當下的收款帳號快照） ---
+export interface BankTransferSnapshot {
+  bankName: string
+  bankCode: string
+  branchName: string
+  accountName: string
+  accountNumber: string
+  paymentDeadlineHours: number
+}
+
+// --- Bank Transfer Report（買家回報匯款資訊） ---
+export interface BankTransferReport {
+  orderId: string
+  last5: string
+  transferredAt: string | null
+  note: string | null
+  reportedAt: string
+}
+
 export interface Order {
   id: string
   orderNo: string
@@ -178,6 +229,24 @@ export interface Order {
   totalAmount: number     // 台幣，整數
   note: string | null
   items?: OrderItem[]
+  // 物流
+  shippingMethod?: ShippingMethod | null
+  shippingProvider?: ShippingProvider | null
+  cvsStoreCode?: string | null
+  cvsStoreName?: string | null
+  cvsStoreAddress?: string | null
+  cvsBrand?: string | null
+  cvsPickupCode?: string | null
+  // 付款
+  bankTransferInfoSnapshot?: BankTransferSnapshot | null
+  bankTransferReport?: {
+    last5: string
+    transferredAt: string | null
+    note: string | null
+    reportedAt: string
+  } | null
+  paymentDueAt?: string | null
+  paidAt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -210,6 +279,12 @@ export interface CreateOrderInput {
   paymentMethod: PaymentMethod
   note?: string
   items: Array<{ productId: string; quantity: number; variantId?: string }>
+  // 物流相關（選填，後端尚未支援時可忽略）
+  shippingMethod?: ShippingMethod
+  shippingProvider?: ShippingProvider
+  pickupStore?: PickupStore | null
+  // 銀行匯款下單當下的收款帳號快照（選填，避免日後商家換帳戶造成舊單不一致）
+  bankTransferInfoSnapshot?: BankTransferSnapshot
 }
 
 export interface CreatePromotionInput {

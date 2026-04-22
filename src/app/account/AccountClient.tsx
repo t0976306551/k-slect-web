@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, Package, LogOut, ChevronRight, Mail } from "lucide-react";
+import { User, Package, LogOut, ChevronRight, Mail, Settings } from "lucide-react";
 
 interface UserInfo {
   name: string;
@@ -61,6 +61,16 @@ export default function AccountClient() {
 
       {/* 功能選單 */}
       <div className="bg-white rounded-[16px] border border-[#F0EFEC] overflow-hidden mb-4">
+        <Link
+          href="/account/profile"
+          className="flex items-center gap-3 px-5 py-4 hover:bg-[#F7F6F3] transition-colors border-b border-[#F0EFEC]"
+        >
+          <div className="w-9 h-9 rounded-[10px] bg-[#EBF1E8] flex items-center justify-center shrink-0">
+            <Settings size={18} className="text-[#7C9070]" />
+          </div>
+          <span className="flex-1 text-[15px] text-[#2D2D2D]">個人資料設定</span>
+          <ChevronRight size={16} className="text-[#C0C0C0]" />
+        </Link>
         <Link
           href="/orders"
           className="flex items-center gap-3 px-5 py-4 hover:bg-[#F7F6F3] transition-colors border-b border-[#F0EFEC]"

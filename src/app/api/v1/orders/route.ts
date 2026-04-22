@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { backendRequest, storefrontRequest } from '@/lib/backend'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  const authError = requireAdmin(req)
+  if (authError) return authError
+
   const { searchParams } = new URL(req.url)
   const params = new URLSearchParams()
   if (searchParams.get('status')) params.set('status', searchParams.get('status')!)
@@ -17,7 +21,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
+  const body: unknown = await req.json().catch(() => null)
+  if (!body) {
+    return NextResponse.json(
+      { data: null, error: { code: 'BAD_REQUEST', message: 'Invalid JSON body' } },
+      { status: 400 },
+    )
+  }
   // 前台顧客建立訂單 → 使用公開的 storefront 端點
   const result = await storefrontRequest('/orders', {
     method: 'POST',

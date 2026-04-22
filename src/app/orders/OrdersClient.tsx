@@ -49,7 +49,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const PAYMENT_LABEL: Record<string, string> = {
-  bank_transfer: "銀行轉帳",
+  bank_transfer: "銀行匯款",
   seller_ship: "貨到付款",
 };
 

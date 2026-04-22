@@ -16,6 +16,8 @@ import type {
   CategorySummary,
   CategoryWithProducts,
   CategoryProductItem,
+  MemberProfile,
+  BankTransferReport,
 } from '../types'
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
@@ -44,6 +46,43 @@ export type {
 export type MockCategory = CategorySummary
 export type MockCategoryData = CategoryWithProducts
 export type MockCategoryProduct = CategoryProductItem
+
+// --- Account profile ---
+
+export async function fetchAccountProfile(): Promise<ApiResponse<MemberProfile>> {
+  const res = await fetch('/api/v1/account/profile', { cache: 'no-store' })
+  return res.json() as Promise<ApiResponse<MemberProfile>>
+}
+
+export async function updateAccountProfile(
+  patch: Partial<Omit<MemberProfile, 'email'>>,
+): Promise<ApiResponse<MemberProfile>> {
+  const res = await fetch('/api/v1/account/profile', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
+  return res.json() as Promise<ApiResponse<MemberProfile>>
+}
+
+export async function fetchBankTransferReport(
+  orderId: string,
+): Promise<ApiResponse<BankTransferReport | null>> {
+  const res = await fetch(`/api/v1/orders/${encodeURIComponent(orderId)}/bank-transfer-report`)
+  return res.json() as Promise<ApiResponse<BankTransferReport | null>>
+}
+
+export async function submitBankTransferReport(
+  orderId: string,
+  input: { last5: string; transferredAt?: string | null; note?: string | null },
+): Promise<ApiResponse<BankTransferReport>> {
+  const res = await fetch(`/api/v1/orders/${encodeURIComponent(orderId)}/bank-transfer-report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  return res.json() as Promise<ApiResponse<BankTransferReport>>
+}
 
 export async function fetchProducts(params?: {
   categoryId?: string
