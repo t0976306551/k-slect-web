@@ -26,8 +26,9 @@ export default function ProfileClient() {
   const [savedAt, setSavedAt] = useState<number | null>(null)
 
   useEffect(() => {
-    fetchAccountProfile()
-      .then((res) => {
+    async function load() {
+      try {
+        const res = await fetchAccountProfile()
         if (res.error) {
           if (res.error.code === 'UNAUTHORIZED') {
             router.replace('/login?from=/account/profile')
@@ -37,9 +38,13 @@ export default function ProfileClient() {
         } else {
           setProfile(res.data)
         }
-      })
-      .catch(() => setError('載入失敗，請稍後再試'))
-      .finally(() => setLoading(false))
+      } catch {
+        setError('載入失敗，請稍後再試')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [router])
 
   async function handleSubmit(e: React.FormEvent) {

@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react'
 import { Check, Send } from 'lucide-react'
 import { fetchBankTransferReport, submitBankTransferReport } from '@/lib/api'
 import type { BankTransferReport } from '@/types'
+import LineNotifyButton from './LineNotifyButton'
 
 interface Props {
   orderId: string
+  total?: number
 }
 
-export default function BankTransferReportForm({ orderId }: Props) {
+export default function BankTransferReportForm({ orderId, total }: Props) {
   const [last5, setLast5] = useState('')
   const [transferredAt, setTransferredAt] = useState('')
   const [note, setNote] = useState('')
@@ -24,11 +26,18 @@ export default function BankTransferReportForm({ orderId }: Props) {
       setLoading(false)
       return
     }
-    fetchBankTransferReport(orderId).then((res) => {
-      if (!active) return
-      if (res.data) setReport(res.data)
-      setLoading(false)
-    })
+    async function load() {
+      try {
+        const res = await fetchBankTransferReport(orderId)
+        if (!active) return
+        if (res.data) setReport(res.data)
+      } catch {
+        // 尚未回報時不顯示錯誤，靜默失敗
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    load()
     return () => {
       active = false
     }
@@ -103,6 +112,7 @@ export default function BankTransferReportForm({ orderId }: Props) {
         <p className="mt-4 text-[12px] text-[#6B6B6B] leading-relaxed bg-[#F7F6F3] rounded-[8px] px-3 py-2">
           已通知商家對帳，款項確認後將更新訂單付款狀態。
         </p>
+        <LineNotifyButton orderId={orderId} total={total} last5={report.last5} />
       </div>
     )
   }
@@ -171,6 +181,8 @@ export default function BankTransferReportForm({ orderId }: Props) {
           <Send size={14} />
           {submitting ? '送出中…' : '送出回報'}
         </button>
+
+        <LineNotifyButton orderId={orderId} total={total} last5={last5 || undefined} />
       </div>
     </form>
   )

@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Package, ChevronRight, Search, ShoppingBag } from "lucide-react";
+import { PAYMENT_LABEL } from "@/lib/order-constants";
+import StatusBadge from "@/components/StatusBadge";
 
 interface OrderItem {
   id: string;
@@ -19,56 +21,6 @@ interface Order {
   createdAt: string;
   customer: { id: string; name: string; email: string };
   items: OrderItem[];
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  pending_ship: "待出貨",
-  shipped: "出貨中",
-  completed: "已完成",
-  cancelled: "已取消",
-  refund_pending: "退款申請中",
-  refunded: "已退款",
-};
-
-const STATUS_BG: Record<string, string> = {
-  pending_ship: "#FFF3E0",
-  shipped: "#E8F0E5",
-  completed: "#F0F0F0",
-  cancelled: "#FBE9E7",
-  refund_pending: "#FFF8E1",
-  refunded: "#F3E5F5",
-};
-
-const STATUS_COLOR: Record<string, string> = {
-  pending_ship: "#E08020",
-  shipped: "#5C7A52",
-  completed: "#6B6B6B",
-  cancelled: "#D4845E",
-  refund_pending: "#D4A020",
-  refunded: "#7B6FA2",
-};
-
-const PAYMENT_LABEL: Record<string, string> = {
-  bank_transfer: "銀行匯款",
-  seller_ship: "貨到付款",
-};
-
-function StatusBadge({ status }: { status: string }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0"
-      style={{
-        background: STATUS_BG[status] ?? "#F0F0F0",
-        color: STATUS_COLOR[status] ?? "#6B6B6B",
-      }}
-    >
-      <span
-        className="w-1.5 h-1.5 rounded-full shrink-0"
-        style={{ background: STATUS_COLOR[status] ?? "#6B6B6B" }}
-      />
-      {STATUS_LABEL[status] ?? status}
-    </span>
-  );
 }
 
 function OrderCardSkeleton() {

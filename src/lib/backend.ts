@@ -1,5 +1,7 @@
 // backend.ts — 代理 k-slect-backend API 呼叫
 
+import type { ApiResponse } from '@/types'
+
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:3001/api'
 const BACKEND_ADMIN_EMAIL = process.env.BACKEND_ADMIN_EMAIL ?? ''
 const BACKEND_ADMIN_PASSWORD = process.env.BACKEND_ADMIN_PASSWORD ?? ''
@@ -33,10 +35,6 @@ async function refreshServiceToken(): Promise<boolean> {
     return false
   }
 }
-
-type ApiResponse<T> =
-  | { data: T; error: null }
-  | { data: null; error: { code: string; message: string } }
 
 async function parseApiResponse<T>(res: Response): Promise<ApiResponse<T>> {
   const contentType = res.headers.get('content-type') ?? ''

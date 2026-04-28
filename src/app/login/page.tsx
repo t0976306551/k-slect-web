@@ -17,7 +17,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -44,12 +44,12 @@ function LoginForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleTabChange = (t: Tab) => {
+  function handleTabChange(t: Tab) {
     setTab(t);
     setError(null);
-  };
+  }
 
   return (
     <div className="min-h-screen flex">

@@ -16,7 +16,7 @@ import type { ProductWithMeta } from '@/lib/api'
 type SortKey = 'default' | 'price-asc' | 'price-desc' | 'popular' | 'top-rated'
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'default',    label: '默認排序'   },
+  { value: 'default',    label: '預設排序'   },
   { value: 'price-asc',  label: '價格低到高' },
   { value: 'price-desc', label: '價格高到低' },
   { value: 'popular',    label: '最多銷售'   },
@@ -143,7 +143,7 @@ export default function ProductsClient() {
     ? (CATEGORIES.find(c => c.slug === activeCategory)?.label ?? '全部商品')
     : '全部商品'
 
-  const activeSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? '默認排序'
+  const activeSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? '預設排序'
 
   return (
     <div className="bg-[#F7F6F3] min-h-screen">

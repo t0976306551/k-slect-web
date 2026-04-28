@@ -101,7 +101,7 @@ export default async function BankTransferPage({ searchParams }: PageProps) {
         </div>
 
         {/* Report form */}
-        <BankTransferReportForm orderId={displayOrderId} />
+        <BankTransferReportForm orderId={displayOrderId} total={total > 0 ? total : undefined} />
 
         {/* Action Buttons */}
         <div className="flex gap-3 mt-6">

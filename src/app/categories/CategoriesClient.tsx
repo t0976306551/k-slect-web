@@ -26,10 +26,17 @@ export default function CategoriesClient() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchCategories().then((res) => {
-      if (res.data) setCategories(res.data)
-      setLoading(false)
-    })
+    async function load() {
+      try {
+        const res = await fetchCategories()
+        if (res.data) setCategories(res.data)
+      } catch {
+        // 保持空列表，UI 會顯示空狀態
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [])
 
   if (loading) {

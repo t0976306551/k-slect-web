@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingBag } from 'lucide-react'
+import { ShoppingBag, PackageX } from 'lucide-react'
 import { fetchCategoryById } from '@/lib/api'
 import type { MockCategoryData, MockCategoryProduct } from '@/lib/api'
 
@@ -45,10 +45,12 @@ export default function CategoryClient() {
 
   if (error || !category) {
     return (
-      <div className="max-w-[1440px] mx-auto px-3 md:px-12 py-24 text-center">
-        <div className="text-5xl mb-4">😕</div>
-        <p className="text-gray-500">{error ?? '分類不存在'}</p>
-        <Link href="/products" className="mt-4 inline-block text-sm text-[#7C9070] hover:underline">
+      <div className="max-w-[1440px] mx-auto px-3 md:px-12 py-24 text-center flex flex-col items-center gap-3">
+        <div className="w-16 h-16 rounded-full bg-[#F0EFEC] flex items-center justify-center mb-2">
+          <PackageX size={24} className="text-[#AEAAA4]" />
+        </div>
+        <p className="font-jakarta text-[15px] font-semibold text-[#2D2D2D]">{error ?? '分類不存在'}</p>
+        <Link href="/products" className="mt-2 font-jakarta text-[13px] font-semibold text-[#7C9070] hover:underline">
           瀏覽所有商品
         </Link>
       </div>
@@ -78,6 +80,14 @@ export default function CategoryClient() {
             const inStock = (product.inventory?.quantity ?? 0) > 0
             const isActive = product.status === 'active'
             const href = `/products/${product.slug ?? product.id}`
+
+            function getStockLabel(): { text: string; className: string } {
+              if (!isActive) return { text: '已下架', className: 'text-gray-400' }
+              if (inStock) return { text: '現貨', className: 'text-green-600' }
+              return { text: '已售完', className: 'text-gray-400' }
+            }
+            const stock = getStockLabel()
+
             return (
               <Link
                 key={product.id}
@@ -106,8 +116,8 @@ export default function CategoryClient() {
                   <p className="text-lg font-bold text-[#7C9070] mt-2">
                     NT$ {product.price.toLocaleString('zh-TW')}
                   </p>
-                  <p className={`text-xs mt-1 ${inStock && isActive ? 'text-green-600' : 'text-gray-400'}`}>
-                    {!isActive ? '已下架' : inStock ? '現貨' : '已售完'}
+                  <p className={`text-xs mt-1 ${stock.className}`}>
+                    {stock.text}
                   </p>
                 </div>
               </Link>

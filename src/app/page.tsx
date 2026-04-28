@@ -35,7 +35,70 @@ const trustItems = [
   { icon: ShieldCheck, label: '正品保證' },
   { icon: Truck, label: '快速出貨' },
   { icon: MessageCircle, label: 'LINE 客服' },
-]
+] as const
+
+interface CategorySectionConfig {
+  readonly products: ProductWithMeta[]
+  readonly title: string
+  readonly subtitle: string
+  readonly icon: LucideIcon
+  readonly iconColor: string
+  readonly bgColor: string
+  readonly borderColor: string
+  readonly linkHref: string
+}
+
+function CategorySection({ config }: { config: CategorySectionConfig }) {
+  if (config.products.length === 0) return null
+  return (
+    <section className="w-full py-6 md:py-10" style={{ backgroundColor: config.bgColor }}>
+      <div className="max-w-[1440px] mx-auto px-3 md:px-12">
+        <div className="flex items-center justify-between px-1 md:px-0 mb-4 md:mb-6">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${config.iconColor}20` }}>
+              <config.icon size={15} className="flex-shrink-0" style={{ color: config.iconColor }} strokeWidth={1.75} />
+            </div>
+            <div>
+              <h2 className="font-fraunces text-[20px] md:text-[26px] font-medium text-[#2D2D2D] tracking-tight leading-none">
+                {config.title}
+              </h2>
+              <p className="font-jakarta text-[11px] md:text-[12px] text-[#AEAAA4] mt-0.5">{config.subtitle}</p>
+            </div>
+          </div>
+          <Link
+            href={config.linkHref}
+            className="font-jakarta text-[12px] md:text-[13px] font-semibold flex items-center gap-1 hover:gap-2 transition-all duration-200 whitespace-nowrap"
+            style={{ color: config.iconColor }}
+          >
+            查看全部 <ArrowRight size={13} />
+          </Link>
+        </div>
+        {/* Mobile scroll */}
+        <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 md:hidden">
+          {config.products.map((product) => (
+            <div key={product.id} className="w-[47vw] max-w-[210px] flex-shrink-0 snap-start">
+              <HomeProductCard product={product} />
+            </div>
+          ))}
+          <Link
+            href={config.linkHref}
+            className="w-[36vw] max-w-[160px] flex-shrink-0 snap-start flex flex-col items-center justify-center rounded-[14px] bg-white/70 aspect-[3/4] gap-2 self-start"
+            style={{ borderColor: config.borderColor, color: config.iconColor, borderWidth: 1 }}
+          >
+            <ArrowRight size={18} strokeWidth={1.75} />
+            <span className="font-jakarta text-[11px] font-semibold">查看全部</span>
+          </Link>
+        </div>
+        {/* Desktop grid */}
+        <div className="hidden md:grid md:grid-cols-4 md:gap-5">
+          {config.products.slice(0, 4).map((product) => (
+            <HomeProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
 
 function HomeProductCard({ product, badge }: { product: ProductWithMeta; badge?: string }) {
   const inStock = product.status === 'active' && (product.inventory?.quantity ?? 0) > 0
@@ -280,149 +343,23 @@ export default async function HomePage() {
       {/* ── CATEGORY SECTIONS ── */}
       <div className="border-t border-[#ECEAE6] mx-3 md:mx-12" />
 
-      {/* Beauty */}
-      {beautyProducts.length > 0 && (
-        <section className="w-full bg-[#FBF0EE] py-6 md:py-10">
-          <div className="max-w-[1440px] mx-auto px-3 md:px-12">
-            <div className="flex items-center justify-between px-1 md:px-0 mb-4 md:mb-6">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-[#D4845E]/20 flex items-center justify-center flex-shrink-0">
-                  <Sparkles size={15} className="text-[#D4845E]" strokeWidth={1.75} />
-                </div>
-                <div>
-                  <h2 className="font-fraunces text-[20px] md:text-[26px] font-medium text-[#2D2D2D] tracking-tight leading-none">
-                    美妝保養
-                  </h2>
-                  <p className="font-jakarta text-[11px] md:text-[12px] text-[#AEAAA4] mt-0.5">韓系護膚，每日必備</p>
-                </div>
-              </div>
-              <Link
-                href="/products?category=beauty"
-                className="font-jakarta text-[12px] md:text-[13px] font-semibold text-[#D4845E] flex items-center gap-1 hover:gap-2 transition-all duration-200 whitespace-nowrap"
-              >
-                查看全部 <ArrowRight size={13} />
-              </Link>
-            </div>
-            {/* Mobile scroll */}
-            <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 md:hidden">
-              {beautyProducts.map((product) => (
-                <div key={product.id} className="w-[47vw] max-w-[210px] flex-shrink-0 snap-start">
-                  <HomeProductCard product={product} />
-                </div>
-              ))}
-              <Link
-                href="/products?category=beauty"
-                className="w-[36vw] max-w-[160px] flex-shrink-0 snap-start flex flex-col items-center justify-center rounded-[14px] bg-white/70 border border-[#F0CECC] aspect-[3/4] gap-2 text-[#D4845E] self-start"
-              >
-                <ArrowRight size={18} strokeWidth={1.75} />
-                <span className="font-jakarta text-[11px] font-semibold">查看全部</span>
-              </Link>
-            </div>
-            {/* Desktop grid */}
-            <div className="hidden md:grid md:grid-cols-4 md:gap-5">
-              {beautyProducts.slice(0, 4).map((product) => (
-                <HomeProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      <CategorySection config={{
+        products: beautyProducts, title: '美妝保養', subtitle: '韓系護膚，每日必備',
+        icon: Sparkles, iconColor: '#D4845E', bgColor: '#FBF0EE', borderColor: '#F0CECC',
+        linkHref: '/products?category=beauty',
+      }} />
 
-      {/* Food */}
-      {foodProducts.length > 0 && (
-        <section className="w-full bg-[#FDF7EE] py-6 md:py-10">
-          <div className="max-w-[1440px] mx-auto px-3 md:px-12">
-            <div className="flex items-center justify-between px-1 md:px-0 mb-4 md:mb-6">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-[#C68C40]/20 flex items-center justify-center flex-shrink-0">
-                  <Cookie size={15} className="text-[#C68C40]" strokeWidth={1.75} />
-                </div>
-                <div>
-                  <h2 className="font-fraunces text-[20px] md:text-[26px] font-medium text-[#2D2D2D] tracking-tight leading-none">
-                    食品零食
-                  </h2>
-                  <p className="font-jakarta text-[11px] md:text-[12px] text-[#AEAAA4] mt-0.5">首爾熱銷，追劇必備</p>
-                </div>
-              </div>
-              <Link
-                href="/products?category=food"
-                className="font-jakarta text-[12px] md:text-[13px] font-semibold text-[#C68C40] flex items-center gap-1 hover:gap-2 transition-all duration-200 whitespace-nowrap"
-              >
-                查看全部 <ArrowRight size={13} />
-              </Link>
-            </div>
-            {/* Mobile scroll */}
-            <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 md:hidden">
-              {foodProducts.map((product) => (
-                <div key={product.id} className="w-[47vw] max-w-[210px] flex-shrink-0 snap-start">
-                  <HomeProductCard product={product} />
-                </div>
-              ))}
-              <Link
-                href="/products?category=food"
-                className="w-[36vw] max-w-[160px] flex-shrink-0 snap-start flex flex-col items-center justify-center rounded-[14px] bg-white/70 border border-[#E8D5B0] aspect-[3/4] gap-2 text-[#C68C40] self-start"
-              >
-                <ArrowRight size={18} strokeWidth={1.75} />
-                <span className="font-jakarta text-[11px] font-semibold">查看全部</span>
-              </Link>
-            </div>
-            {/* Desktop grid */}
-            <div className="hidden md:grid md:grid-cols-4 md:gap-5">
-              {foodProducts.slice(0, 4).map((product) => (
-                <HomeProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      <CategorySection config={{
+        products: foodProducts, title: '食品零食', subtitle: '首爾熱銷，追劇必備',
+        icon: Cookie, iconColor: '#C68C40', bgColor: '#FDF7EE', borderColor: '#E8D5B0',
+        linkHref: '/products?category=food',
+      }} />
 
-      {/* Fashion */}
-      {fashionProducts.length > 0 && (
-        <section className="w-full bg-[#EEF3FA] py-6 md:py-10">
-          <div className="max-w-[1440px] mx-auto px-3 md:px-12">
-            <div className="flex items-center justify-between px-1 md:px-0 mb-4 md:mb-6">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-[#5B9BD5]/20 flex items-center justify-center flex-shrink-0">
-                  <Shirt size={15} className="text-[#5B9BD5]" strokeWidth={1.75} />
-                </div>
-                <div>
-                  <h2 className="font-fraunces text-[20px] md:text-[26px] font-medium text-[#2D2D2D] tracking-tight leading-none">
-                    服飾配件
-                  </h2>
-                  <p className="font-jakarta text-[11px] md:text-[12px] text-[#AEAAA4] mt-0.5">韓系穿搭，輕鬆入手</p>
-                </div>
-              </div>
-              <Link
-                href="/products?category=fashion"
-                className="font-jakarta text-[12px] md:text-[13px] font-semibold text-[#5B9BD5] flex items-center gap-1 hover:gap-2 transition-all duration-200 whitespace-nowrap"
-              >
-                查看全部 <ArrowRight size={13} />
-              </Link>
-            </div>
-            {/* Mobile scroll */}
-            <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 md:hidden">
-              {fashionProducts.map((product) => (
-                <div key={product.id} className="w-[47vw] max-w-[210px] flex-shrink-0 snap-start">
-                  <HomeProductCard product={product} />
-                </div>
-              ))}
-              <Link
-                href="/products?category=fashion"
-                className="w-[36vw] max-w-[160px] flex-shrink-0 snap-start flex flex-col items-center justify-center rounded-[14px] bg-white/70 border border-[#C0D4EC] aspect-[3/4] gap-2 text-[#5B9BD5] self-start"
-              >
-                <ArrowRight size={18} strokeWidth={1.75} />
-                <span className="font-jakarta text-[11px] font-semibold">查看全部</span>
-              </Link>
-            </div>
-            {/* Desktop grid */}
-            <div className="hidden md:grid md:grid-cols-4 md:gap-5">
-              {fashionProducts.slice(0, 4).map((product) => (
-                <HomeProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      <CategorySection config={{
+        products: fashionProducts, title: '服飾配件', subtitle: '韓系穿搭，輕鬆入手',
+        icon: Shirt, iconColor: '#5B9BD5', bgColor: '#EEF3FA', borderColor: '#C0D4EC',
+        linkHref: '/products?category=fashion',
+      }} />
 
       {/* ── LINE CTA BANNER ── */}
       <section className="mx-3 md:mx-12 mb-8 md:mb-12 mt-5 md:mt-8">

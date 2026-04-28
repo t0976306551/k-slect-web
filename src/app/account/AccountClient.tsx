@@ -17,21 +17,30 @@ export default function AccountClient() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
-    fetch("/api/v1/auth/me")
-      .then((r) => r.json())
-      .then((json) => {
+    async function load() {
+      try {
+        const res = await fetch("/api/v1/auth/me");
+        const json = await res.json();
         if (json.data) setUser(json.data);
         else router.replace("/login?from=/account");
-      })
-      .catch(() => router.replace("/login?from=/account"))
-      .finally(() => setLoading(false));
+      } catch {
+        router.replace("/login?from=/account");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
   }, [router]);
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     setLoggingOut(true);
-    await fetch("/api/v1/auth/logout", { method: "POST" });
-    router.replace("/login");
-  };
+    try {
+      await fetch("/api/v1/auth/logout", { method: "POST" });
+    } finally {
+      setLoggingOut(false);
+      router.replace("/login");
+    }
+  }
 
   if (loading) {
     return (
