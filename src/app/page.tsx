@@ -160,7 +160,7 @@ function HomeProductCard({ product, badge }: { product: ProductWithMeta; badge?:
 
 export default async function HomePage() {
   const [productsRes, categoriesRes] = await Promise.all([
-    fetchProducts({ status: 'active' }),
+    fetchProducts(),
     fetchCategories(),
   ])
   const allProducts = (productsRes.data ?? []) as ProductWithMeta[]

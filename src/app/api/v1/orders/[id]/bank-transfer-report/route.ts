@@ -91,7 +91,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     const status =
       result.error.code === 'FORBIDDEN'
         ? 403
-        : result.error.code === 'ORDER_NOT_FOUND'
+        : result.error.code === 'NOT_FOUND' || result.error.code === 'ORDER_NOT_FOUND'
           ? 404
           : result.error.code === 'VALIDATION_ERROR'
             ? 400

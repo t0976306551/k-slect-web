@@ -8,6 +8,12 @@ import { ShoppingBag, PackageX } from 'lucide-react'
 import { fetchCategoryById } from '@/lib/api'
 import type { MockCategoryData, MockCategoryProduct } from '@/lib/api'
 
+function getStockLabel(isActive: boolean, inStock: boolean): { text: string; className: string } {
+  if (!isActive) return { text: '已下架', className: 'text-gray-400' }
+  if (inStock) return { text: '現貨', className: 'text-green-600' }
+  return { text: '已售完', className: 'text-gray-400' }
+}
+
 export default function CategoryClient() {
   const params = useParams<{ id: string }>()
   const id = params?.id ?? ''
@@ -80,13 +86,7 @@ export default function CategoryClient() {
             const inStock = (product.inventory?.quantity ?? 0) > 0
             const isActive = product.status === 'active'
             const href = `/products/${product.slug ?? product.id}`
-
-            function getStockLabel(): { text: string; className: string } {
-              if (!isActive) return { text: '已下架', className: 'text-gray-400' }
-              if (inStock) return { text: '現貨', className: 'text-green-600' }
-              return { text: '已售完', className: 'text-gray-400' }
-            }
-            const stock = getStockLabel()
+            const stock = getStockLabel(isActive, inStock)
 
             return (
               <Link

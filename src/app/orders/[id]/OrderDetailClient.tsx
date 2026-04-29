@@ -9,7 +9,6 @@ import {
   AlertCircle,
   RotateCcw,
 } from "lucide-react";
-import { fetchBankTransferReport } from "@/lib/api";
 import StatusBadge from "@/components/StatusBadge";
 import LineIcon from "@/components/LineIcon";
 import type { BankTransferReport } from "@/types";
@@ -58,13 +57,14 @@ function useOrderDetail(id: string | undefined) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bankReport, setBankReport] = useState<BankTransferReport | null>(null);
 
   useEffect(() => {
     if (!id) return;
     async function load() {
       try {
-        const res = await fetch(`/api/v1/orders/${id}`);
+        const email = typeof window !== 'undefined' ? localStorage.getItem('customer_email') ?? '' : ''
+        const qs = email ? `?email=${encodeURIComponent(email)}` : ''
+        const res = await fetch(`/api/v1/orders/${id}${qs}`);
         const json = await res.json();
         if (json.error) setError(json.error.message);
         else setOrder(json.data);
@@ -77,33 +77,24 @@ function useOrderDetail(id: string | undefined) {
     load();
   }, [id]);
 
-  useEffect(() => {
-    if (!id) return;
-    async function loadReport() {
-      try {
-        const res = await fetchBankTransferReport(id!);
-        if (res.data) setBankReport(res.data);
-      } catch {
-        // 無匯款回報記錄屬正常情況，靜默忽略
-      }
-    }
-    loadReport();
-  }, [id]);
-
-  return { order, loading, error, bankReport };
+  return { order, loading, error };
 }
 
 export default function OrderDetailClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params?.id;
-  const { order, loading, error, bankReport } = useOrderDetail(id);
+  const { order, loading, error } = useOrderDetail(id);
 
   if (loading) return <DetailSkeleton />;
   if (error || !order) return <ErrorView message={error ?? "找不到此訂單"} />;
 
   const isCancelled = order.status === "cancelled";
   const isBankTransfer = order.paymentMethod === "bank_transfer";
+
+  const bankReport: BankTransferReport | null = order.bankTransferReport
+    ? { orderId: order.id, ...order.bankTransferReport }
+    : null;
 
   return (
     <>
@@ -187,6 +178,7 @@ export default function OrderDetailClient() {
             <RecipientCard
               customer={order.customer}
               shippingMethod={order.shippingMethod}
+              shippingAddress={order.shippingAddress}
               pickupStore={order.pickupStore}
             />
 

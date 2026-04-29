@@ -45,6 +45,9 @@ export const LABEL_CLS =
 
 /** 表單驗證，回傳錯誤訊息或 null */
 export function validateForm(form: FormState): string | null {
+  if (!form.customerName.trim()) return '請填寫收件人姓名'
+  if (!form.customerEmail.trim()) return '請填寫電子郵件'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail.trim())) return '電子郵件格式有誤'
   if (form.shippingMethod === 'cvs_pickup' && !form.pickupStoreName.trim()) {
     return '請填寫取貨門市'
   }
@@ -57,8 +60,10 @@ export function validateForm(form: FormState): string | null {
 /** 從表單狀態 + 購物車品項組裝 createOrder 的 payload */
 export function buildOrderPayload(form: FormState, cartItems: readonly CartItem[]): CreateOrderInput {
   const isCvs = form.shippingMethod === 'cvs_pickup'
-  const isCvsProvider =
+  const cvsProvider =
     form.shippingProvider === 'seven_eleven' || form.shippingProvider === 'family_mart'
+      ? form.shippingProvider
+      : null
 
   return {
     customerName: form.customerName,
@@ -73,14 +78,15 @@ export function buildOrderPayload(form: FormState, cartItems: readonly CartItem[
     shippingMethod: form.shippingMethod,
     shippingProvider: form.shippingProvider,
     pickupStore:
-      isCvs && isCvsProvider
-        ? { provider: form.shippingProvider as 'seven_eleven' | 'family_mart', storeCode: form.pickupStoreCode, storeName: form.pickupStoreName }
+      isCvs && cvsProvider
+        ? { provider: cvsProvider, storeCode: form.pickupStoreCode, storeName: form.pickupStoreName }
         : null,
     bankTransferInfoSnapshot:
       form.paymentMethod === 'bank_transfer' ? getMerchantBankAccount() : undefined,
     note: form.note || undefined,
     items: cartItems.map((item) => ({
       productId: item.productId,
+      variantId: item.variantId || undefined,
       quantity: item.quantity,
     })),
   }

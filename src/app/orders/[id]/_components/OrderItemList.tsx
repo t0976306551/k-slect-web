@@ -9,16 +9,19 @@ interface OrderItemListProps {
 
 function ItemRow({ item }: { readonly item: OrderItemData }) {
   const subtotal = item.priceAtOrder * item.quantity;
-  const nameEl = item.product.slug ? (
+  const variantEntries = item.variantSnapshot
+    ? Object.entries(item.variantSnapshot)
+    : [];
+  const nameEl = item.product?.slug ? (
     <Link
       href={`/products/${item.product.slug}`}
       className="text-[13px] font-medium text-[#2D2D2D] hover:text-[#7C9070] transition-colors line-clamp-2 leading-snug"
     >
-      {item.product.name}
+      {item.productName}
     </Link>
   ) : (
     <p className="text-[13px] font-medium text-[#2D2D2D] line-clamp-2 leading-snug">
-      {item.product.name}
+      {item.productName}
     </p>
   );
 
@@ -29,6 +32,18 @@ function ItemRow({ item }: { readonly item: OrderItemData }) {
       </div>
       <div className="flex-1 min-w-0">
         {nameEl}
+        {variantEntries.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {variantEntries.map(([key, value]) => (
+              <span
+                key={key}
+                className="inline-block text-[11px] text-[#6B6B6B] bg-[#F0EFEC] rounded-[4px] px-1.5 py-0.5 leading-none"
+              >
+                {key}：{value}
+              </span>
+            ))}
+          </div>
+        )}
         <p className="text-[12px] text-[#9E9E9E] mt-1 tabular-nums">
           NT$ {item.priceAtOrder.toLocaleString("zh-TW")} × {item.quantity}
         </p>

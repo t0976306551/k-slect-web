@@ -97,7 +97,7 @@ export default function ProductsClient() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchProducts({ status: 'active' })
+      const res = await fetchProducts()
       if (res.error) setError(res.error.message)
       else setAllProducts((res.data ?? []) as ProductWithMeta[])
     } catch {

@@ -23,7 +23,7 @@ export default function SearchPage() {
     setLoading(true)
     setSearched(true)
     try {
-      const res = await fetchProducts({ q, status: 'active' })
+      const res = await fetchProducts({ q })
       setProducts((res.data ?? []) as ProductWithMeta[])
     } catch {
       setProducts([])

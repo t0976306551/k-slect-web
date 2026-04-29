@@ -5,13 +5,32 @@ import { requireAdmin } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
+  const email = searchParams.get('email')
+
+  // 顧客依 email 查詢自己的訂單 → 走公開的 storefront 端點
+  if (email) {
+    const params = new URLSearchParams({ email })
+    if (searchParams.get('limit')) params.set('limit', searchParams.get('limit')!)
+    if (searchParams.get('page')) params.set('page', searchParams.get('page')!)
+    const result = await storefrontRequest(`/orders?${params.toString()}`)
+    return NextResponse.json(result, {
+      status: result.error
+        ? result.error.code === 'VALIDATION_ERROR'
+          ? 400
+          : result.error.code === 'NOT_FOUND'
+            ? 404
+            : 500
+        : 200,
+    })
+  }
+
+  // Admin 列出所有訂單 → 要求管理員權限
   const authError = requireAdmin(req)
   if (authError) return authError
 
-  const { searchParams } = new URL(req.url)
   const params = new URLSearchParams()
   if (searchParams.get('status')) params.set('status', searchParams.get('status')!)
-  if (searchParams.get('email')) params.set('search', searchParams.get('email')!)
   if (searchParams.get('limit')) params.set('limit', searchParams.get('limit')!)
   if (searchParams.get('page')) params.set('page', searchParams.get('page')!)
 

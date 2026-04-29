@@ -51,10 +51,31 @@ export type MockCategoryProduct = CategoryProductItem
 
 // ── 共用 fetch 工具 ──
 
+/** SSR 環境需要絕對 URL；瀏覽器端相對 URL 即可 */
+function withBase(url: string): string {
+  if (typeof window !== 'undefined') return url
+  const base = process.env.NEXTAUTH_URL
+  if (!base) throw new Error('NEXTAUTH_URL is required for server-side data fetching')
+  return `${base.replace(/\/$/, '')}${url}`
+}
+
+const FETCH_TIMEOUT_MS = 10_000
+
 /** GET 請求，回傳 ApiResponse<T> */
 async function apiGet<T>(url: string, init?: RequestInit): Promise<ApiResponse<T>> {
-  const res = await fetch(url, init)
-  return res.json() as Promise<ApiResponse<T>>
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  try {
+    const res = await fetch(withBase(url), { ...init, signal: controller.signal })
+    return (await res.json()) as ApiResponse<T>
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return { data: null, error: { code: 'TIMEOUT', message: '請求逾時，請稍後再試' } }
+    }
+    return { data: null, error: { code: 'NETWORK_ERROR', message: '網路錯誤，請稍後再試' } }
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** POST/PATCH/DELETE 請求，回傳 ApiResponse<T> */
@@ -63,12 +84,24 @@ async function apiMutate<T>(
   method: 'POST' | 'PATCH' | 'DELETE',
   body?: unknown,
 ): Promise<ApiResponse<T>> {
-  const res = await fetch(url, {
-    method,
-    headers: JSON_HEADERS,
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-  })
-  return res.json() as Promise<ApiResponse<T>>
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  try {
+    const res = await fetch(withBase(url), {
+      method,
+      headers: JSON_HEADERS,
+      signal: controller.signal,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    })
+    return (await res.json()) as ApiResponse<T>
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return { data: null, error: { code: 'TIMEOUT', message: '請求逾時，請稍後再試' } }
+    }
+    return { data: null, error: { code: 'NETWORK_ERROR', message: '網路錯誤，請稍後再試' } }
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** 將 params 物件轉成 query string（過濾 undefined） */
@@ -98,6 +131,9 @@ export async function updateAccountProfile(
 export async function fetchBankTransferReport(
   orderId: string,
 ): Promise<ApiResponse<BankTransferReport | null>> {
+  if (USE_MOCK) {
+    return { data: null, error: null }
+  }
   return apiGet(`/api/v1/orders/${encodeURIComponent(orderId)}/bank-transfer-report`)
 }
 
@@ -105,6 +141,16 @@ export async function submitBankTransferReport(
   orderId: string,
   input: { last5: string; transferredAt?: string | null; note?: string | null },
 ): Promise<ApiResponse<BankTransferReport>> {
+  if (USE_MOCK) {
+    const report: BankTransferReport = {
+      orderId,
+      last5: input.last5,
+      transferredAt: input.transferredAt ?? null,
+      note: input.note ?? null,
+      reportedAt: new Date().toISOString(),
+    }
+    return { data: report, error: null }
+  }
   return apiMutate(
     `/api/v1/orders/${encodeURIComponent(orderId)}/bank-transfer-report`,
     'POST',
@@ -117,13 +163,11 @@ export async function submitBankTransferReport(
 export async function fetchProducts(params?: {
   categoryId?: string
   q?: string
-  status?: string
 }): Promise<ApiResponse<Product[]>> {
   if (USE_MOCK) return mockFetchProducts(params)
   const qs = buildQuery({
     categoryId: params?.categoryId,
     q: params?.q,
-    status: params?.status,
   })
   return apiGet(`/api/v1/products${qs}`)
 }

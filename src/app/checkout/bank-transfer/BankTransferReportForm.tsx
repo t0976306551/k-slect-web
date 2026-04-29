@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Check, Send } from 'lucide-react'
 import { fetchBankTransferReport, submitBankTransferReport } from '@/lib/api'
 import type { BankTransferReport } from '@/types'
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function BankTransferReportForm({ orderId, total }: Props) {
+  const router = useRouter()
   const [last5, setLast5] = useState('')
   const [transferredAt, setTransferredAt] = useState('')
   const [note, setNote] = useState('')
@@ -57,15 +59,26 @@ export default function BankTransferReportForm({ orderId, total }: Props) {
     setError(null)
     const res = await submitBankTransferReport(orderId, {
       last5,
-      transferredAt: transferredAt || null,
+      transferredAt: transferredAt ? new Date(transferredAt).toISOString() : null,
       note: note || null,
     })
     setSubmitting(false)
     if (res.error) {
+      if (res.error.code === 'ALREADY_REPORTED') {
+        // 已回報過，重新載入並顯示唯讀狀態
+        try {
+          const existing = await fetchBankTransferReport(orderId)
+          if (existing.data) setReport(existing.data)
+        } catch {
+          // 無法取得既有回報，維持現狀
+        }
+        return
+      }
       setError(res.error.message)
       return
     }
-    if (res.data) setReport(res.data)
+    const successUrl = `/checkout/success?orderId=${encodeURIComponent(orderId)}${total ? `&total=${total}` : ''}`
+    router.push(successUrl)
   }
 
   if (loading) {
@@ -139,8 +152,15 @@ export default function BankTransferReportForm({ orderId, total }: Props) {
             value={last5}
             onChange={(e) => setLast5(e.target.value.replace(/\D/g, ''))}
             placeholder="例：12345"
-            className="w-full text-[15px] font-mono tracking-widest text-center px-3 py-3 bg-white border border-[#E8E8E8] rounded-[10px] focus:border-[#7C9070] focus:outline-none"
+            className={`w-full text-[15px] font-mono tracking-widest text-center px-3 py-3 bg-white border rounded-[10px] focus:outline-none transition-colors ${
+              last5.length === 5
+                ? 'border-[#7C9070] focus:border-[#7C9070]'
+                : 'border-[#E8E8E8] focus:border-[#7C9070]'
+            }`}
           />
+          <p className="mt-1.5 text-[11px] text-right tabular-nums text-[#9E9E9E] flex items-center justify-end gap-1">
+            {last5.length} / 5 碼{last5.length === 5 && <Check size={10} className="text-[#7C9070]" strokeWidth={3} />}
+          </p>
         </div>
 
         <div>

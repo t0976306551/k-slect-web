@@ -9,12 +9,19 @@ export async function GET(req: NextRequest) {
   const params = new URLSearchParams()
   if (searchParams.get('categoryId')) params.set('categoryId', searchParams.get('categoryId')!)
   if (searchParams.get('q')) params.set('q', searchParams.get('q')!)
-  if (searchParams.get('status')) params.set('status', searchParams.get('status')!)
   if (searchParams.get('limit')) params.set('limit', searchParams.get('limit')!)
   if (searchParams.get('offset')) params.set('offset', searchParams.get('offset')!)
 
   const qs = params.toString()
-  const result = await storefrontRequest(`/products${qs ? `?${qs}` : ''}`)
+  const result = await storefrontRequest<{ products: unknown[]; total: number }>(`/products${qs ? `?${qs}` : ''}`)
+
+  // storefront 回傳 { products: [...], total: N }，正規化為陣列格式供前端使用
+  if (result.data) {
+    return NextResponse.json(
+      { data: result.data.products, error: null },
+      { status: 200 },
+    )
+  }
   return NextResponse.json(result, { status: result.error ? 500 : 200 })
 }
 

@@ -76,7 +76,7 @@ export async function mockCreateOrder(input: {
   }, 0)
 
   const order: Order = {
-    id: `ORD-${Date.now()}`,
+    id: crypto.randomUUID(),
     orderNo: `ORD-MOCK-${Date.now()}`,
     customerId: 'mock-customer',
     customerName: input.customerName,

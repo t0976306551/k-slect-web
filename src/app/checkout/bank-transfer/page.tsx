@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Check, Copy } from "lucide-react";
-import Navbar from "@/components/Navbar";
+import { Check } from "lucide-react";
 import { getMerchantBankAccount } from "@/lib/merchant";
 import BankTransferReportForm from "./BankTransferReportForm";
+import CopyButton from "./CopyButton";
 
 interface PageProps {
   searchParams: Promise<{ orderId?: string; total?: string }>;
@@ -16,8 +16,6 @@ export default async function BankTransferPage({ searchParams }: PageProps) {
 
   return (
     <div className="min-h-screen bg-[#F7F6F3]">
-      <Navbar />
-
       <div className="max-w-[640px] mx-auto px-5 md:px-12 py-10">
         {/* Step Indicator */}
         <div className="flex items-center gap-3 mb-8 bg-white rounded-[12px] border border-[#F0EFEC] px-5 py-4">
@@ -65,13 +63,7 @@ export default async function BankTransferPage({ searchParams }: PageProps) {
               <p className="text-[18px] font-bold text-[#2D2D2D] tracking-wide">
                 {account.accountNumber}
               </p>
-              <button
-                onClick={() => navigator.clipboard.writeText(account.accountNumber)}
-                className="flex items-center gap-1.5 text-[#7C9070] text-[12px] font-medium border border-[#7C9070] rounded-lg px-2.5 py-1 hover:bg-[#7C9070]/5 transition-colors"
-              >
-                <Copy size={12} />
-                複製
-              </button>
+              <CopyButton text={account.accountNumber} />
             </div>
           </div>
 
@@ -104,16 +96,10 @@ export default async function BankTransferPage({ searchParams }: PageProps) {
         <BankTransferReportForm orderId={displayOrderId} total={total > 0 ? total : undefined} />
 
         {/* Action Buttons */}
-        <div className="flex gap-3 mt-6">
-          <Link
-            href={`/checkout/success?orderId=${displayOrderId}${total > 0 ? `&total=${total}` : ''}`}
-            className="flex-1 flex items-center justify-center bg-[#7C9070] text-white text-[15px] font-semibold py-3.5 rounded-[10px] hover:bg-[#6B7F60] transition-colors"
-          >
-            我已完成轉帳
-          </Link>
+        <div className="mt-6">
           <Link
             href="/"
-            className="flex-1 flex items-center justify-center border border-[#E8E8E8] bg-white text-[#6B6B6B] text-[15px] font-medium py-3.5 rounded-[10px] hover:border-[#D0D0D0] transition-colors"
+            className="w-full flex items-center justify-center border border-[#E8E8E8] bg-white text-[#6B6B6B] text-[15px] font-medium py-3.5 rounded-[10px] hover:border-[#D0D0D0] transition-colors"
           >
             返回首頁
           </Link>

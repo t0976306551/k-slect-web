@@ -9,6 +9,7 @@ interface RecipientCardProps {
     readonly address?: string | null;
   };
   readonly shippingMethod?: string | null;
+  readonly shippingAddress?: string | null;
   readonly pickupStore?: PickupStoreInfo | null;
 }
 
@@ -30,11 +31,13 @@ function InfoLine({
 function AddressInfo({
   shippingMethod,
   pickupStore,
-  address,
+  shippingAddress,
+  fallbackAddress,
 }: {
   readonly shippingMethod?: string | null;
   readonly pickupStore?: PickupStoreInfo | null;
-  readonly address?: string | null;
+  readonly shippingAddress?: string | null;
+  readonly fallbackAddress?: string | null;
 }) {
   if (shippingMethod === "cvs_pickup" && pickupStore?.storeName) {
     const providerLabel = SHIPPING_PROVIDER_LABEL[pickupStore.provider ?? ""] ?? "";
@@ -47,10 +50,11 @@ function AddressInfo({
     );
   }
 
-  if (address) {
+  const displayAddress = shippingAddress ?? fallbackAddress;
+  if (displayAddress) {
     return (
       <InfoLine icon={<MapPin size={13} />}>
-        {address}
+        {displayAddress}
       </InfoLine>
     );
   }
@@ -61,6 +65,7 @@ function AddressInfo({
 export default function RecipientCard({
   customer,
   shippingMethod,
+  shippingAddress,
   pickupStore,
 }: RecipientCardProps) {
   return (
@@ -78,7 +83,8 @@ export default function RecipientCard({
         <AddressInfo
           shippingMethod={shippingMethod}
           pickupStore={pickupStore}
-          address={customer.address}
+          shippingAddress={shippingAddress}
+          fallbackAddress={customer.address}
         />
       </div>
     </div>

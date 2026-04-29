@@ -1,7 +1,7 @@
 import { STATUS_BG, STATUS_COLOR, STATUS_LABEL } from '@/lib/order-constants'
 
 interface StatusBadgeProps {
-  status: string
+  readonly status: string
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {

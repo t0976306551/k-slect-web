@@ -10,7 +10,8 @@ interface OrderItem {
   id: string;
   quantity: number;
   priceAtOrder: number;
-  product: { id: string; name: string };
+  productName: string;
+  variantSnapshot?: Record<string, string> | null;
 }
 
 interface Order {
@@ -170,14 +171,26 @@ export default function OrdersClient() {
 
               {/* Product preview + total */}
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[13px] text-[#2D2D2D] line-clamp-1 flex-1">
-                  {order.items[0]?.product.name ?? "—"}
-                  {order.items.length > 1 && (
-                    <span className="text-[#9E9E9E]">
-                      {" "}等 {order.items.length} 件
-                    </span>
-                  )}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] text-[#2D2D2D] line-clamp-1">
+                    {order.items[0]?.productName ?? "—"}
+                    {order.items.length > 1 && (
+                      <span className="text-[#9E9E9E]">
+                        {" "}等 {order.items.length} 件
+                      </span>
+                    )}
+                  </p>
+                  {(() => {
+                    const entries = order.items[0]?.variantSnapshot
+                      ? Object.entries(order.items[0].variantSnapshot)
+                      : []
+                    return entries.length > 0 ? (
+                      <p className="text-[11px] text-[#9E9E9E] mt-0.5 line-clamp-1">
+                        {entries.map(([k, v]) => `${k}：${v}`).join("　")}
+                      </p>
+                    ) : null
+                  })()}
+                </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="font-jakarta font-semibold text-[14px] text-[#2D2D2D] tabular-nums">
                     NT$ {order.totalAmount.toLocaleString("zh-TW")}
