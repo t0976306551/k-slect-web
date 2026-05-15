@@ -6,6 +6,8 @@ import Image from 'next/image'
 import { Trash2, ShoppingBag, ArrowRight, Package } from 'lucide-react'
 import { getCart, updateQuantity, removeFromCart, getCartTotal, getCartCount } from '@/lib/cart'
 import type { CartItem } from '@/lib/cart'
+import LineIcon from '@/components/LineIcon'
+import { buildLineContactUrl } from '@/lib/line'
 
 const REMOVE_ANIMATION_DURATION_MS = 250
 
@@ -64,8 +66,7 @@ export default function CartClient() {
           <p style={{ animation: 'fade-up 0.5s cubic-bezier(0.25,1,0.5,1) 80ms both' }} className="font-jakarta text-[16px] font-semibold text-[#2D2D2D]">購物車是空的</p>
           <p style={{ animation: 'fade-up 0.5s cubic-bezier(0.25,1,0.5,1) 140ms both' }} className="font-jakarta text-[13px] text-[#AEAAA4]">快去挑選你喜歡的韓貨吧！</p>
           <Link
-            href="/products"
-            style={{ animation: 'fade-up 0.5s cubic-bezier(0.25,1,0.5,1) 200ms both' }}
+            href="/"
             className="mt-3 inline-flex items-center gap-2 font-jakarta font-semibold text-[14px] bg-[#7C9070] hover:bg-[#6a7d5f] active:scale-[0.98] text-white px-7 py-3 rounded-[10px] transition-all duration-200"
           >
             探索商品 <ArrowRight size={15} />
@@ -185,8 +186,7 @@ export default function CartClient() {
             {/* Continue shopping */}
             <div className="pt-1 md:pt-2">
               <Link
-                href="/products"
-                className="font-jakarta text-[13px] text-[#7C9070] hover:underline flex items-center gap-1"
+                href="/"
               >
                 ← 繼續購物
               </Link>
@@ -224,16 +224,15 @@ export default function CartClient() {
                 </span>
               </div>
 
-              <p className="font-jakarta text-[11px] text-[#AEAAA4] -mt-1">
-                運費於結帳時確認
-              </p>
-
-              <Link
-                href="/checkout"
-                className="block text-center bg-[#7C9070] hover:bg-[#6a7d5f] active:scale-[0.98] text-white font-jakarta font-semibold text-[15px] py-3.5 rounded-[11px] transition-all duration-200"
+              <a
+                href={buildLineContactUrl(items)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-[#06C755] hover:bg-[#05a847] active:scale-[0.98] text-white font-jakarta font-semibold text-[15px] py-3.5 rounded-[11px] transition-all duration-200"
               >
-                前往結帳
-              </Link>
+                <LineIcon size={18} />
+                透過 LINE 洽詢
+              </a>
             </div>
           </div>
         </div>

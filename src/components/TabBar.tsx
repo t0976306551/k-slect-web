@@ -2,14 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Grid3X3, Search, ShoppingCart, User } from "lucide-react";
+import { Home, Grid3X3, ShoppingCart } from "lucide-react";
 
 const tabs = [
   { href: "/", label: "首頁", Icon: Home },
-  { href: "/products", label: "分類", Icon: Grid3X3 },
-  { href: "/search", label: "搜尋", Icon: Search },
+  { href: "/", label: "商品", Icon: Grid3X3 },
   { href: "/cart", label: "購物車", Icon: ShoppingCart },
-  { href: "/account", label: "我的", Icon: User },
 ];
 
 export default function TabBar() {
@@ -22,7 +20,7 @@ export default function TabBar() {
           const isActive = pathname === href || (href !== "/" && (pathname ?? "").startsWith(href));
           return (
             <Link
-              key={href}
+              key={label}
               href={href}
               className="flex flex-col items-center gap-1 min-w-[60px]"
             >

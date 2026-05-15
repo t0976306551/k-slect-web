@@ -8,6 +8,11 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
+  async redirects() {
+    return [
+      { source: '/products', destination: '/', permanent: false },
+    ]
+  },
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
   },

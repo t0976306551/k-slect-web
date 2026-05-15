@@ -1,18 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
   Search, ShoppingBag, Sparkles, Cookie, Shirt,
-  Package, ChevronDown, Check, X,
+  Package, ChevronDown, ChevronRight, ChevronLeft, Check, X, type LucideIcon,
 } from 'lucide-react'
 import { addToCart } from '@/lib/cart'
-import { fetchProducts } from '@/lib/api'
-import type { ProductWithMeta } from '@/lib/api'
+import { fetchProducts, fetchCategories } from '@/lib/api'
+import type { ProductWithMeta, CategorySummary } from '@/lib/api'
 
-// ── Types ────────────────────────────────────────────────────────────────────
 type SortKey = 'default' | 'price-asc' | 'price-desc' | 'popular' | 'top-rated'
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -23,15 +22,25 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'top-rated',  label: '最高評分'   },
 ]
 
-const CATEGORIES = [
-  { slug: 'all',     label: '全部',    Icon: null,     color: '#2D2D2D' },
-  { slug: 'beauty',  label: '美妝保養', Icon: Sparkles, color: '#D4845E' },
-  { slug: 'food',    label: '食品零食', Icon: Cookie,   color: '#C68C40' },
-  { slug: 'fashion', label: '服飾配件', Icon: Shirt,    color: '#5B9BD5' },
-  { slug: 'hot',     label: '熱銷推薦', Icon: Package,  color: '#7C9070' },
-]
+type DisplayCategory = {
+  slug: string
+  label: string
+  Icon: LucideIcon | null
+  color: string
+}
+
+// slug → icon/color 對應，API 回傳的分類名稱用這裡補充視覺資訊
+const SLUG_META: Record<string, { Icon: DisplayCategory['Icon']; color: string }> = {
+  beauty:  { Icon: Sparkles, color: '#D4845E' },
+  food:    { Icon: Cookie,   color: '#C68C40' },
+  fashion: { Icon: Shirt,    color: '#5B9BD5' },
+}
+
+const VIRTUAL_ALL: DisplayCategory  = { slug: 'all', label: '全部',    Icon: null,    color: '#2D2D2D' }
+const VIRTUAL_HOT: DisplayCategory  = { slug: 'hot', label: '熱銷推薦', Icon: Package, color: '#7C9070' }
 
 const ADDED_FEEDBACK_DURATION_MS = 1500
+const PAGE_SIZE = 24
 
 function sortProducts(list: ProductWithMeta[], key: SortKey): ProductWithMeta[] {
   const arr = [...list]
@@ -44,7 +53,6 @@ function sortProducts(list: ProductWithMeta[], key: SortKey): ProductWithMeta[] 
   }
 }
 
-// ── Skeleton ─────────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
     <div className="bg-white rounded-[14px] md:rounded-[18px] border border-[#F0EFEC] overflow-hidden animate-pulse flex flex-col">
@@ -62,22 +70,49 @@ function SkeletonCard() {
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
-export default function ProductsClient() {
+export default function HomeProductsSection({ defaultCategory }: { defaultCategory?: string }) {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const pathname = usePathname()
 
   const [allProducts, setAllProducts] = useState<ProductWithMeta[]>([])
+  const [apiCategories, setApiCategories] = useState<CategorySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [sortOpen, setSortOpen] = useState(false)
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
+  const [canScrollLeft, setCanScrollLeft]   = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const sortRef = useRef<HTMLDivElement>(null)
+  const pillsRef = useRef<HTMLDivElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const activeCategory = searchParams?.get('category') ?? 'all'
+  function updateScrollState() {
+    const el = pillsRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+  }
+
+  function scrollPills(dir: 'left' | 'right') {
+    pillsRef.current?.scrollBy({ left: dir === 'right' ? 160 : -160, behavior: 'smooth' })
+  }
+
+  // 組合展示用分類：全部 + API 根分類 + 熱銷推薦
+  const displayCategories = useMemo<DisplayCategory[]>(() => {
+    const roots = apiCategories.filter(c => c.parentId === null)
+    const middle = roots.map(c => ({
+      slug: c.slug,
+      label: c.name,
+      ...(SLUG_META[c.slug] ?? { Icon: null, color: '#2D2D2D' }),
+    }))
+    return [VIRTUAL_ALL, ...middle, VIRTUAL_HOT]
+  }, [apiCategories])
+
+  // If defaultCategory is provided (category page), use it as fixed; otherwise read from URL
+  const activeCategory = defaultCategory ?? (searchParams?.get('category') ?? 'all')
   const sortBy = (searchParams?.get('sort') ?? 'default') as SortKey
 
   useEffect(() => {
@@ -89,17 +124,40 @@ export default function ProductsClient() {
   }, [])
 
   useEffect(() => {
+    const el = pillsRef.current
+    if (!el) return
+    updateScrollState()
+    el.addEventListener('scroll', updateScrollState, { passive: true })
+    const ro = new ResizeObserver(updateScrollState)
+    ro.observe(el)
+    return () => { el.removeEventListener('scroll', updateScrollState); ro.disconnect() }
+  }, [displayCategories])
+
+  useEffect(() => {
     const t = timers.current
     return () => t.forEach(clearTimeout)
+  }, [])
+
+  // IntersectionObserver：sentinel 進入視窗時自動載入更多
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisibleCount(c => c + PAGE_SIZE) },
+      { rootMargin: '200px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
   }, [])
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchProducts()
-      if (res.error) setError(res.error.message)
-      else setAllProducts((res.data ?? []) as ProductWithMeta[])
+      const [prodRes, catRes] = await Promise.all([fetchProducts(), fetchCategories()])
+      if (prodRes.error) setError(prodRes.error.message)
+      else setAllProducts((prodRes.data ?? []) as ProductWithMeta[])
+      if (!catRes.error) setApiCategories(catRes.data ?? [])
     } catch {
       setError('載入商品失敗，請稍後再試')
     } finally {
@@ -111,20 +169,41 @@ export default function ProductsClient() {
 
   const products = useMemo(() => {
     let list = allProducts
-    if (activeCategory !== 'all') list = list.filter(p => p.categoryId === activeCategory)
+    if (activeCategory === 'hot') {
+      // 虛擬分類：按銷售數排序取全部
+      list = [...list].sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
+    } else if (activeCategory !== 'all') {
+      list = list.filter(p => p.category?.slug === activeCategory)
+    }
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter(p => p.name.toLowerCase().includes(q))
     }
-    return sortProducts(list, sortBy)
+    return activeCategory === 'hot' ? list : sortProducts(list, sortBy)
   }, [allProducts, activeCategory, search, sortBy])
+
+  // 分類/搜尋/排序改變時，重置顯示數量
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [activeCategory, search, sortBy])
+
+  const visibleProducts = products.slice(0, visibleCount)
+  const hasMore = visibleCount < products.length
 
   function setParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams?.toString() ?? '')
     if (value === 'all' || value === 'default') params.delete(key)
     else params.set(key, value)
     const qs = params.toString()
-    router.push(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false })
+    if (defaultCategory) {
+      // On a category page: category pills navigate to homepage; sort stays on current page
+      if (key === 'category') {
+        const dest = value === 'all' ? '/#products' : `/?category=${value}#products`
+        router.push(dest, { scroll: false })
+      } else {
+        router.push(`${window.location.pathname}${qs ? `?${qs}` : ''}`, { scroll: false })
+      }
+    } else {
+      router.push(`/${qs ? `?${qs}` : ''}#products`, { scroll: false })
+    }
   }
 
   function handleAddToCart(product: ProductWithMeta) {
@@ -139,104 +218,119 @@ export default function ProductsClient() {
     timers.current.set(product.id, t)
   }
 
-  const pageTitle = activeCategory !== 'all'
-    ? (CATEGORIES.find(c => c.slug === activeCategory)?.label ?? '全部商品')
-    : '全部商品'
-
   const activeSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? '預設排序'
 
   return (
-    <div className="bg-[#F7F6F3] min-h-screen">
-
-      {/* ── Page Header ── */}
-      <div className="bg-white border-b border-[#F0EFEC]">
-        <div className="max-w-[1440px] mx-auto px-4 md:px-12 pt-5 md:pt-8 pb-3 md:pb-4 flex flex-col md:flex-row md:items-end md:justify-between gap-3 md:gap-0">
-          <div>
-            <h1 className="font-fraunces text-[22px] md:text-[30px] font-medium text-[#2D2D2D] tracking-tight leading-tight">
-              {pageTitle}
-            </h1>
-            {!loading && !error && (
-              <p className="font-jakarta text-[12px] text-[#AEAAA4] mt-1">
-                {products.length > 0
-                  ? `共 ${products.length} 個商品`
-                  : search ? `「${search}」無搜尋結果` : '目前無商品'}
-              </p>
-            )}
-          </div>
-          {/* Search */}
-          <div className="relative">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#AEAAA4] pointer-events-none" />
-            <input
-              type="text"
-              placeholder="搜尋商品..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-8 py-2.5 border border-[#ECEAE6] bg-[#F7F6F3] rounded-full text-[13px] text-[#2D2D2D] placeholder:text-[#C4C0BA] focus:outline-none focus:border-[#7C9070] focus:bg-white transition-all w-full md:w-64"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#AEAAA4] hover:text-[#2D2D2D] transition-colors">
-                <X size={13} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Filter Bar ── */}
-        <div className="max-w-[1440px] mx-auto px-3 md:px-12 pb-3 flex items-center gap-3">
-          {/* Category pills */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5 flex-1 min-w-0">
-            {CATEGORIES.map(({ slug, label, Icon, color }) => {
-              const isActive = activeCategory === slug
-              return (
+    <section id="products" className="bg-[#F7F6F3]">
+      {/* Filter Bar */}
+      <div className="bg-white border-b border-[#F0EFEC] sticky top-14 md:top-16 z-30">
+        <div className="max-w-[1440px] mx-auto px-3 md:px-12 pt-3 pb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-0">
+          <div className="relative flex-1 min-w-0">
+            {/* 左側淡出 + 向左鍵 */}
+            {canScrollLeft && (
+              <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center pointer-events-none">
+                <div className="w-10 h-full bg-gradient-to-r from-white to-transparent" />
                 <button
-                  key={slug}
-                  onClick={() => setParam('category', slug)}
-                  style={isActive ? { backgroundColor: color, borderColor: color } : {}}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-jakarta text-[12px] font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 border ${
-                    isActive
-                      ? 'text-white shadow-sm'
-                      : 'bg-transparent text-[#6B6B6B] border-[#ECEAE6] hover:border-[#D0CEC8] hover:text-[#2D2D2D]'
-                  }`}
+                  onClick={() => scrollPills('left')}
+                  className="absolute left-0 pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-white border border-[#ECEAE6] shadow-sm hover:border-[#D0CEC8] transition-colors"
                 >
-                  {Icon && <Icon size={11} strokeWidth={2} />}
-                  {label}
+                  <ChevronLeft size={13} strokeWidth={2} className="text-[#6B6B6B]" />
                 </button>
-              )
-            })}
-          </div>
-
-          {/* Sort dropdown */}
-          <div className="relative flex-shrink-0" ref={sortRef}>
-            <button
-              onClick={() => setSortOpen(v => !v)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-jakarta text-[12px] font-medium border border-[#ECEAE6] bg-white text-[#2D2D2D] hover:border-[#D0CEC8] transition-colors whitespace-nowrap"
-            >
-              {activeSortLabel}
-              <ChevronDown size={11} strokeWidth={2} className={`transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {sortOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-36 bg-white rounded-[12px] border border-[#ECEAE6] shadow-[0_8px_24px_rgba(0,0,0,0.09)] overflow-hidden z-30 py-1">
-                {SORT_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setParam('sort', opt.value); setSortOpen(false) }}
-                    className={`w-full text-left px-4 py-2.5 font-jakarta text-[12px] flex items-center justify-between hover:bg-[#F7F6F3] transition-colors ${
-                      sortBy === opt.value ? 'text-[#7C9070] font-semibold' : 'text-[#2D2D2D]'
-                    }`}
-                  >
-                    {opt.label}
-                    {sortBy === opt.value && <Check size={11} strokeWidth={2.5} />}
-                  </button>
-                ))}
               </div>
             )}
+            {/* 右側淡出 + 向右鍵 */}
+            {canScrollRight && (
+              <div className="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-end pointer-events-none">
+                <div className="w-10 h-full bg-gradient-to-l from-white to-transparent" />
+                <button
+                  onClick={() => scrollPills('right')}
+                  className="absolute right-0 pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-white border border-[#ECEAE6] shadow-sm hover:border-[#D0CEC8] transition-colors"
+                >
+                  <ChevronRight size={13} strokeWidth={2} className="text-[#6B6B6B]" />
+                </button>
+              </div>
+            )}
+            <div ref={pillsRef} className="flex gap-2 overflow-x-auto no-scrollbar">
+              {displayCategories.map(({ slug, label, Icon, color }) => {
+                const isActive = activeCategory === slug
+                return (
+                  <button
+                    key={slug}
+                    onClick={() => setParam('category', slug)}
+                    style={isActive ? { backgroundColor: color, borderColor: color } : {}}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-jakarta text-[12px] font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 border ${
+                      isActive
+                        ? 'text-white shadow-sm'
+                        : 'bg-transparent text-[#6B6B6B] border-[#ECEAE6] hover:border-[#D0CEC8] hover:text-[#2D2D2D]'
+                    }`}
+                  >
+                    {Icon && <Icon size={11} strokeWidth={2} />}
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Search */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#AEAAA4] pointer-events-none" />
+              <input
+                type="text"
+                placeholder="搜尋商品..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9 pr-8 py-2 border border-[#ECEAE6] bg-[#F7F6F3] rounded-full text-[12px] text-[#2D2D2D] placeholder:text-[#C4C0BA] focus:outline-none focus:border-[#7C9070] focus:bg-white transition-all w-40 md:w-52"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#AEAAA4] hover:text-[#2D2D2D] transition-colors">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Sort */}
+            <div className="relative flex-shrink-0" ref={sortRef}>
+              <button
+                onClick={() => setSortOpen(v => !v)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full font-jakarta text-[12px] font-medium border border-[#ECEAE6] bg-white text-[#2D2D2D] hover:border-[#D0CEC8] transition-colors whitespace-nowrap"
+              >
+                {activeSortLabel}
+                <ChevronDown size={11} strokeWidth={2} className={`transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {sortOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-36 bg-white rounded-[12px] border border-[#ECEAE6] shadow-[0_8px_24px_rgba(0,0,0,0.09)] overflow-hidden z-30 py-1">
+                  {SORT_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setParam('sort', opt.value); setSortOpen(false) }}
+                      className={`w-full text-left px-4 py-2.5 font-jakarta text-[12px] flex items-center justify-between hover:bg-[#F7F6F3] transition-colors ${
+                        sortBy === opt.value ? 'text-[#7C9070] font-semibold' : 'text-[#2D2D2D]'
+                      }`}
+                    >
+                      {opt.label}
+                      {sortBy === opt.value && <Check size={11} strokeWidth={2.5} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
+        {!loading && !error && (
+          <div className="max-w-[1440px] mx-auto px-4 md:px-12 pb-2">
+            <p className="font-jakarta text-[11px] text-[#AEAAA4]">
+              {products.length > 0
+                ? `共 ${products.length} 個商品`
+                : search ? `「${search}」無搜尋結果` : '目前無商品'}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* ── Content ── */}
+      {/* Product Grid */}
       <div className="max-w-[1440px] mx-auto px-3 md:px-12 py-5 md:py-8">
-
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-5">
             {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
@@ -279,7 +373,7 @@ export default function ProductsClient() {
             key={`${activeCategory}-${sortBy}`}
             className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-5"
           >
-            {products.map((product, i) => {
+            {visibleProducts.map((product, i) => {
               const href = `/products/${product.slug ?? product.id}`
               const inStock = product.status === 'active' && (product.inventory?.quantity ?? 0) > 0
               const isAdded = addedIds.has(product.id)
@@ -356,7 +450,14 @@ export default function ProductsClient() {
             })}
           </div>
         )}
+
+        {/* 無限滾動 sentinel */}
+        {!loading && !error && hasMore && (
+          <div ref={sentinelRef} className="flex justify-center py-8">
+            <div className="w-6 h-6 rounded-full border-2 border-[#ECEAE6] border-t-[#7C9070] animate-spin" />
+          </div>
+        )}
       </div>
-    </div>
+    </section>
   )
 }

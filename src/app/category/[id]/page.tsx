@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic'
 
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { storefrontRequest } from '@/lib/backend'
-import CategoryClient from './CategoryClient'
+import HomeProductsSection from '@/components/HomeProductsSection'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -29,5 +30,9 @@ export default async function CategoryPage({ params }: Props) {
     if (result.error?.code === 'NOT_FOUND' || !result.data) notFound()
   }
 
-  return <CategoryClient />
+  return (
+    <Suspense>
+      <HomeProductsSection defaultCategory={id} />
+    </Suspense>
+  )
 }

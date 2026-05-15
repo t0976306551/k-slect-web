@@ -81,7 +81,7 @@ export interface ProductVariant {
   image: string | null
   quantity: number
   lowStockThreshold: number
-  status: string
+  status: 'active' | 'inactive'
   optionValues?: ProductOptionValue[]  // TypeORM ManyToMany 直接回傳陣列
 }
 
@@ -92,7 +92,7 @@ export interface Product {
   slug: string | null
   description: string | null
   price: number           // 台幣，整數
-  originalPrice?: number | null  // 原價（劃線價）
+  originalPrice: number | null   // 原價（劃線價），Entity nullable
   status: 'active' | 'inactive'
   categoryId: string
   externalUrl: string | null
@@ -111,7 +111,6 @@ export interface Product {
 // 前台商品展示（含 UI 顯示用欄位）
 export interface ProductWithMeta extends Product {
   image: string | null
-  originalPrice?: number | null
   rating: number
   reviewCount: number
   soldCount: number
@@ -143,7 +142,7 @@ export interface OrderItem {
   productName: string      // 下單時商品名稱快照
   sku: string              // 下單時 SKU 快照
   image: string | null
-  variantSnapshot?: Record<string, string> | null  // {"顏色":"紅色","尺寸":"M"}
+  variantSnapshot: Record<string, string> | null  // {"顏色":"紅色","尺寸":"M"}，Entity nullable
   quantity: number
   priceAtOrder: number    // 下單當下價格快照
   createdAt: string
@@ -229,24 +228,19 @@ export interface Order {
   totalAmount: number     // 台幣，整數
   note: string | null
   items?: OrderItem[]
-  // 物流
-  shippingMethod?: ShippingMethod | null
-  shippingProvider?: ShippingProvider | null
-  cvsStoreCode?: string | null
-  cvsStoreName?: string | null
-  cvsStoreAddress?: string | null
-  cvsBrand?: string | null
-  cvsPickupCode?: string | null
-  // 付款
-  bankTransferInfoSnapshot?: BankTransferSnapshot | null
-  bankTransferReport?: {
-    last5: string
-    transferredAt: string | null
-    note: string | null
-    reportedAt: string
-  } | null
-  paymentDueAt?: string | null
-  paidAt?: string | null
+  // 物流（Entity nullable columns，API 回傳時一定存在）
+  shippingMethod: ShippingMethod | null
+  shippingProvider: ShippingProvider | null
+  cvsStoreCode: string | null
+  cvsStoreName: string | null
+  cvsStoreAddress: string | null
+  cvsBrand: string | null
+  cvsPickupCode: string | null
+  // 付款（Entity nullable columns，API 回傳時一定存在）
+  bankTransferInfoSnapshot: BankTransferSnapshot | null
+  bankTransferReport: BankTransferReport | null
+  paymentDueAt: string | null
+  paidAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -259,7 +253,7 @@ export interface Promotion {
   id: string
   channel: PromotionChannel
   platform: string
-  productIds: string[]
+  products: Pick<Product, 'id' | 'name'>[]  // TypeORM ManyToMany 回傳
   message: string
   utmUrl: string | null
   status: PromotionStatus

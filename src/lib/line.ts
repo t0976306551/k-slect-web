@@ -12,6 +12,8 @@
  * 申請流程：https://tw.linebiz.com/service/line-official-account/
  */
 
+import type { CartItem } from '@/types'
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://k-slect.com'
 
 export interface ProductInfo {
@@ -86,6 +88,30 @@ export function buildMultiProductLineMessage(products: ProductInfo[]): LineMessa
   ]
 
   return { text: lines.join('\n'), productUrl }
+}
+
+/** 產生購物車 LINE 訊息文字 */
+export function buildCartLineMessage(items: CartItem[]): string {
+  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const lines: string[] = ['您好！我想詢問以下商品：', '', '商品清單：']
+  items.forEach((item, i) => {
+    const spec = item.variantLabel ? `（${item.variantLabel}）` : ''
+    const subtotal = item.price * item.quantity
+    lines.push(`${i + 1}. ${item.productName}${spec} x ${item.quantity} NT$${subtotal.toLocaleString('zh-TW')}`)
+  })
+  lines.push('', `合計：NT$${total.toLocaleString('zh-TW')}`, '', '請問如何訂購與付款？謝謝！')
+  return lines.join('\n')
+}
+
+/** 產生帶購物車訊息的 LINE OA 聯絡 URL */
+export function buildLineContactUrl(items: CartItem[]): string {
+  const oaId = process.env.NEXT_PUBLIC_LINE_OA_ID
+  if (!oaId) {
+    console.warn('[line.ts] NEXT_PUBLIC_LINE_OA_ID 未設定，fallback 到 LINE 首頁')
+    return 'https://line.me'
+  }
+  const message = buildCartLineMessage(items)
+  return `https://line.me/R/oaMessage/${oaId}/?${encodeURIComponent(message)}`
 }
 
 /**

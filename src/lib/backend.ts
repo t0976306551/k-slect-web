@@ -2,7 +2,7 @@
 
 import type { ApiResponse } from '@/types'
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:3001/api'
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:3847/api'
 const BACKEND_ADMIN_EMAIL = process.env.BACKEND_ADMIN_EMAIL ?? ''
 const BACKEND_ADMIN_PASSWORD = process.env.BACKEND_ADMIN_PASSWORD ?? ''
 
