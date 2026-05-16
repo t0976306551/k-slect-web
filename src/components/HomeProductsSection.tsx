@@ -6,21 +6,11 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   Search, ShoppingBag, Sparkles, Cookie, Shirt,
-  Package, ChevronDown, ChevronRight, ChevronLeft, Check, X, type LucideIcon,
+  Package, ChevronRight, ChevronLeft, X, type LucideIcon,
 } from 'lucide-react'
 import { addToCart } from '@/lib/cart'
 import { fetchProducts, fetchCategories } from '@/lib/api'
 import type { ProductWithMeta, CategorySummary } from '@/lib/api'
-
-type SortKey = 'default' | 'price-asc' | 'price-desc' | 'popular' | 'top-rated'
-
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'default',    label: '預設排序'   },
-  { value: 'price-asc',  label: '價格低到高' },
-  { value: 'price-desc', label: '價格高到低' },
-  { value: 'popular',    label: '最多銷售'   },
-  { value: 'top-rated',  label: '最高評分'   },
-]
 
 type DisplayCategory = {
   slug: string
@@ -41,17 +31,6 @@ const VIRTUAL_HOT: DisplayCategory  = { slug: 'hot', label: '熱銷推薦', Icon
 
 const ADDED_FEEDBACK_DURATION_MS = 1500
 const PAGE_SIZE = 24
-
-function sortProducts(list: ProductWithMeta[], key: SortKey): ProductWithMeta[] {
-  const arr = [...list]
-  switch (key) {
-    case 'price-asc':  return arr.sort((a, b) => a.price - b.price)
-    case 'price-desc': return arr.sort((a, b) => b.price - a.price)
-    case 'popular':    return arr.sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
-    case 'top-rated':  return arr.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-    default:           return arr
-  }
-}
 
 function SkeletonCard() {
   return (
@@ -79,13 +58,11 @@ export default function HomeProductsSection({ defaultCategory }: { defaultCatego
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [sortOpen, setSortOpen] = useState(false)
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
   const [canScrollLeft, setCanScrollLeft]   = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-  const sortRef = useRef<HTMLDivElement>(null)
   const pillsRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -113,15 +90,6 @@ export default function HomeProductsSection({ defaultCategory }: { defaultCatego
 
   // If defaultCategory is provided (category page), use it as fixed; otherwise read from URL
   const activeCategory = defaultCategory ?? (searchParams?.get('category') ?? 'all')
-  const sortBy = (searchParams?.get('sort') ?? 'default') as SortKey
-
-  useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false)
-    }
-    document.addEventListener('mousedown', onOutside)
-    return () => document.removeEventListener('mousedown', onOutside)
-  }, [])
 
   useEffect(() => {
     const el = pillsRef.current
@@ -169,21 +137,18 @@ export default function HomeProductsSection({ defaultCategory }: { defaultCatego
 
   const products = useMemo(() => {
     let list = allProducts
-    if (activeCategory === 'hot') {
-      // 虛擬分類：按銷售數排序取全部
-      list = [...list].sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
-    } else if (activeCategory !== 'all') {
+    if (activeCategory !== 'all' && activeCategory !== 'hot') {
       list = list.filter(p => p.category?.slug === activeCategory)
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter(p => p.name.toLowerCase().includes(q))
     }
-    return activeCategory === 'hot' ? list : sortProducts(list, sortBy)
-  }, [allProducts, activeCategory, search, sortBy])
+    return list
+  }, [allProducts, activeCategory, search])
 
-  // 分類/搜尋/排序改變時，重置顯示數量
-  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [activeCategory, search, sortBy])
+  // 分類/搜尋改變時，重置顯示數量
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [activeCategory, search])
 
   const visibleProducts = products.slice(0, visibleCount)
   const hasMore = visibleCount < products.length
@@ -217,8 +182,6 @@ export default function HomeProductsSection({ defaultCategory }: { defaultCatego
     }, ADDED_FEEDBACK_DURATION_MS)
     timers.current.set(product.id, t)
   }
-
-  const activeSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? '預設排序'
 
   return (
     <section id="products" className="bg-[#F7F6F3]">
@@ -272,7 +235,7 @@ export default function HomeProductsSection({ defaultCategory }: { defaultCatego
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center flex-shrink-0">
             {/* Search */}
             <div className="relative">
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#AEAAA4] pointer-events-none" />
@@ -287,33 +250,6 @@ export default function HomeProductsSection({ defaultCategory }: { defaultCatego
                 <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#AEAAA4] hover:text-[#2D2D2D] transition-colors">
                   <X size={13} />
                 </button>
-              )}
-            </div>
-
-            {/* Sort */}
-            <div className="relative flex-shrink-0" ref={sortRef}>
-              <button
-                onClick={() => setSortOpen(v => !v)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full font-jakarta text-[12px] font-medium border border-[#ECEAE6] bg-white text-[#2D2D2D] hover:border-[#D0CEC8] transition-colors whitespace-nowrap"
-              >
-                {activeSortLabel}
-                <ChevronDown size={11} strokeWidth={2} className={`transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {sortOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-36 bg-white rounded-[12px] border border-[#ECEAE6] shadow-[0_8px_24px_rgba(0,0,0,0.09)] overflow-hidden z-30 py-1">
-                  {SORT_OPTIONS.map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => { setParam('sort', opt.value); setSortOpen(false) }}
-                      className={`w-full text-left px-4 py-2.5 font-jakarta text-[12px] flex items-center justify-between hover:bg-[#F7F6F3] transition-colors ${
-                        sortBy === opt.value ? 'text-[#7C9070] font-semibold' : 'text-[#2D2D2D]'
-                      }`}
-                    >
-                      {opt.label}
-                      {sortBy === opt.value && <Check size={11} strokeWidth={2.5} />}
-                    </button>
-                  ))}
-                </div>
               )}
             </div>
           </div>
@@ -370,7 +306,7 @@ export default function HomeProductsSection({ defaultCategory }: { defaultCatego
 
         {!loading && !error && products.length > 0 && (
           <div
-            key={`${activeCategory}-${sortBy}`}
+            key={activeCategory}
             className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-5"
           >
             {visibleProducts.map((product, i) => {

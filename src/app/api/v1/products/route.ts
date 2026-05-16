@@ -16,9 +16,15 @@ export async function GET(req: NextRequest) {
   const result = await storefrontRequest<{ products: unknown[]; total: number }>(`/products${qs ? `?${qs}` : ''}`)
 
   // storefront 回傳 { products: [...], total: N }，正規化為陣列格式供前端使用
+  // 同時補上 image 欄位（images[0]），供前端元件直接使用
   if (result.data) {
+    const products = result.data.products.map((p) => {
+      const product = p as Record<string, unknown>
+      const images = product.images
+      return { ...product, image: Array.isArray(images) ? (images[0] ?? null) : null }
+    })
     return NextResponse.json(
-      { data: result.data.products, error: null },
+      { data: products, error: null },
       { status: 200 },
     )
   }

@@ -8,7 +8,12 @@ type RouteContext = { params: Promise<{ id: string }> }
 
 export async function GET(_req: NextRequest, { params }: RouteContext) {
   const { id } = await params
-  const result = await storefrontRequest(`/products/${id}`)
+  const result = await storefrontRequest<Record<string, unknown>>(`/products/${id}`)
+  if (result.data) {
+    const images = result.data.images
+    const product = { ...result.data, image: Array.isArray(images) ? (images[0] ?? null) : null }
+    return NextResponse.json({ data: product, error: null }, { status: 200 })
+  }
   const status = result.error?.code === 'NOT_FOUND' ? 404 : result.error ? 500 : 200
   return NextResponse.json(result, { status })
 }

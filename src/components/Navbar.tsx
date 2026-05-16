@@ -12,6 +12,11 @@ export default function Navbar() {
           <Link href="/" className="font-fraunces text-2xl font-semibold text-[#7C9070] tracking-tight">
             韓好物
           </Link>
+          <div className="hidden md:flex items-center gap-6">
+            <Link href="/#products" className="font-jakarta text-[14px] text-[#6B6B6B] hover:text-[#2D2D2D] transition-colors">
+              所有商品
+            </Link>
+          </div>
         </div>
 
         {/* Right: Icons */}

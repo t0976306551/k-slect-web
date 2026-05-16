@@ -18,6 +18,7 @@ import type {
   CategoryProductItem,
   MemberProfile,
   BankTransferReport,
+  StorefrontBanner,
 } from '../types'
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
@@ -42,6 +43,7 @@ export type {
   CategorySummary,
   CategoryWithProducts,
   CategoryProductItem,
+  StorefrontBanner,
 }
 
 // 向後相容的別名（現有頁面從 api.ts import 的舊名稱）
@@ -156,6 +158,12 @@ export async function submitBankTransferReport(
     'POST',
     input,
   )
+}
+
+// ── Banners ──
+
+export async function fetchBanners(): Promise<ApiResponse<StorefrontBanner[]>> {
+  return apiGet('/api/v1/banners')
 }
 
 // ── Products ──

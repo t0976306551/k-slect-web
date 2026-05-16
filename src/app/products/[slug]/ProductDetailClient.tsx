@@ -3,6 +3,7 @@
 import type { ReactElement } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import AddToCartButton from './_components/AddToCartButton'
 import Breadcrumb from './_components/Breadcrumb'
 import ErrorState from './_components/ErrorState'
@@ -60,7 +61,7 @@ export default function ProductDetailClient(): ReactElement {
       <Breadcrumb productName={product.name} />
 
       <div className="max-w-[1440px] mx-auto md:px-12 md:pb-16 pb-[140px]">
-        <div className="grid grid-cols-1 md:grid-cols-2 md:gap-12 md:items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[5fr_7fr] md:gap-12 md:items-start">
           <ProductImageGallery
             images={carouselImages}
             productName={product.name}
@@ -70,6 +71,13 @@ export default function ProductDetailClient(): ReactElement {
           />
 
           <div className="px-4 md:px-0 py-5 md:py-2 flex flex-col gap-4">
+            <Link
+              href="/#products"
+              className="hidden md:inline-flex items-center gap-1.5 font-jakarta text-[13px] text-[#6B6B6B] hover:text-[#2D2D2D] transition-colors self-start"
+            >
+              <ArrowLeft size={14} strokeWidth={2} />
+              繼續購物
+            </Link>
             <ProductHeader
               categoryName={product.category?.name}
               productName={product.name}

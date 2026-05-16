@@ -127,6 +127,7 @@ export async function storefrontRequest<T>(
 
   try {
     const res = await fetch(url, {
+      cache: 'no-store',
       ...init,
       headers,
       signal: AbortSignal.timeout(30_000),

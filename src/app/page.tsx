@@ -1,5 +1,3 @@
-import Link from 'next/link'
-import Image from 'next/image'
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import {
@@ -8,6 +6,8 @@ import {
   Truck,
 } from 'lucide-react'
 import HomeProductsSection from '@/components/HomeProductsSection'
+import BannerCarousel from '@/components/BannerCarousel'
+import { fetchBanners } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,12 +17,15 @@ export const metadata: Metadata = {
 }
 
 const trustItems = [
-  { icon: ShieldCheck, label: '正品保證' },
+  { icon: ShieldCheck, label: '品質嚴選' },
   { icon: Truck, label: '快速出貨' },
   { icon: MessageCircle, label: 'LINE 客服' },
 ] as const
 
 export default async function HomePage() {
+  const bannersRes = await fetchBanners().catch(() => ({ data: null, error: null }))
+  const banners = bannersRes.data ?? []
+
   return (
     <div className="bg-[#F7F6F3]">
 
@@ -30,16 +33,7 @@ export default async function HomePage() {
 
       {/* Mobile Hero */}
       <section className="md:hidden bg-white">
-        <div className="w-full aspect-[4/3] overflow-hidden">
-          <Image
-            src="/images/generated-1773832286774.png"
-            alt="韓國好物"
-            width={800}
-            height={600}
-            className="w-full h-full object-cover"
-            priority
-          />
-        </div>
+        <BannerCarousel banners={banners} variant="mobile" />
         <div className="px-5 pt-6 pb-7 flex flex-col gap-3">
           <p className="font-jakarta text-[11px] font-semibold tracking-[0.1em] uppercase text-[#7C9070]">
             From Seoul · 直送台灣
@@ -101,16 +95,7 @@ export default async function HomePage() {
               </a>
             </div>
           </div>
-          <div className="w-[580px] h-[420px] rounded-[20px] overflow-hidden flex-shrink-0">
-            <Image
-              src="/images/generated-1773832286774.png"
-              alt="韓國好物"
-              width={580}
-              height={420}
-              className="w-full h-full object-cover"
-              priority
-            />
-          </div>
+          <BannerCarousel banners={banners} variant="desktop" />
         </div>
       </section>
 
