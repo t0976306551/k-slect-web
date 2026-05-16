@@ -12,10 +12,12 @@ function findVariant(
 ): ProductVariant | undefined {
   const entries = Object.entries(selectedValues)
   if (entries.length === 0) return undefined
-  return variants.find((v) =>
-    entries.every(([, valueId]) =>
-      v.optionValues?.some((ov) => ov.id === valueId),
-    ),
+  return variants.find(
+    (v) =>
+      v.status === 'active' &&
+      entries.every(([, valueId]) =>
+        v.optionValues?.some((ov) => ov.id === valueId),
+      ),
   )
 }
 
@@ -100,7 +102,7 @@ export default function useProductDetail(id: string): ProductDetailState {
     const matched = product.variants.filter((v) =>
       entries.every(([, vid]) => v.optionValues?.some((ov) => ov.id === vid)),
     )
-    return matched.length > 0 && matched.every((v) => v.quantity === 0)
+    return matched.length > 0 && matched.every((v) => v.status !== 'active' || v.quantity === 0)
   }
 
   function handleAddToCart(): void {

@@ -224,21 +224,14 @@ export default function CartClient() {
                 </span>
               </div>
 
-              <Link
-                href="/checkout"
-                className="flex items-center justify-center gap-2 bg-[#7C9070] hover:bg-[#6a7d5f] active:scale-[0.98] text-white font-jakarta font-semibold text-[15px] py-3.5 rounded-[11px] transition-all duration-200"
-              >
-                前往結帳 <ArrowRight size={15} />
-              </Link>
-
               <a
                 href={buildLineContactUrl(items)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 border border-[#06C755] text-[#06C755] hover:bg-[#f0fff4] active:scale-[0.98] font-jakarta font-semibold text-[14px] py-3 rounded-[11px] transition-all duration-200"
+                className="flex items-center justify-center gap-2 bg-[#06C755] hover:bg-[#05b34c] active:scale-[0.98] text-white font-jakarta font-semibold text-[15px] py-3.5 rounded-[11px] transition-all duration-200"
               >
                 <LineIcon size={16} />
-                透過 LINE 洽詢
+                透過 LINE 聯絡下單
               </a>
             </div>
           </div>

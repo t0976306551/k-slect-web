@@ -79,6 +79,7 @@ export default async function ProductDetailPage({ params }: Props) {
   }
 
   const product = await getProduct(slug)
+  if (!product) notFound()
 
   const productSchema = product
     ? {
