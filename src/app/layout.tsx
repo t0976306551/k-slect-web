@@ -3,6 +3,9 @@ import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import TabBar from "@/components/TabBar";
+import { NavigationProgress } from "@/components/NavigationProgress";
+import { PageTransition } from "@/components/PageTransition";
+import { WebToastProvider } from "@/components/WebToastProvider";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -44,9 +47,14 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className={`${fraunces.variable} ${jakarta.variable} antialiased min-h-screen bg-[#F7F6F3]`}>
-        <Navbar />
-        <main className="pb-[88px] md:pb-0">{children}</main>
-        <TabBar />
+        <NavigationProgress />
+        <WebToastProvider>
+          <Navbar />
+          <main className="pb-[88px] md:pb-0">
+            <PageTransition>{children}</PageTransition>
+          </main>
+          <TabBar />
+        </WebToastProvider>
       </body>
     </html>
   );
