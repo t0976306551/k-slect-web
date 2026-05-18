@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { addToCart } from '@/lib/cart'
 import { fetchProducts, fetchCategories } from '@/lib/api'
+import { useWebToast } from '@/components/WebToastProvider'
 import type { ProductWithMeta, CategorySummary } from '@/lib/api'
 
 type DisplayCategory = {
@@ -34,16 +35,16 @@ const PAGE_SIZE = 24
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-[14px] md:rounded-[18px] border border-[#F0EFEC] overflow-hidden animate-pulse flex flex-col">
-      <div className="w-full aspect-square bg-[#F0EFEC]" />
+    <div className="bg-white rounded-[14px] md:rounded-[18px] border border-[#F0EFEC] overflow-hidden flex flex-col">
+      <div className="w-full aspect-square skeleton-shimmer" />
       <div className="p-3 md:p-4 flex flex-col gap-2">
-        <div className="h-2 bg-[#F0EFEC] rounded w-1/3" />
-        <div className="h-3 bg-[#F0EFEC] rounded w-full" />
-        <div className="h-3 bg-[#F0EFEC] rounded w-2/3" />
-        <div className="h-4 bg-[#F0EFEC] rounded w-1/2 mt-1" />
+        <div className="h-2 skeleton-shimmer rounded w-1/3" />
+        <div className="h-3 skeleton-shimmer rounded w-full" />
+        <div className="h-3 skeleton-shimmer rounded w-2/3" />
+        <div className="h-4 skeleton-shimmer rounded w-1/2 mt-1" />
       </div>
       <div className="px-3 md:px-4 pb-3 md:pb-4 mt-auto">
-        <div className="h-9 bg-[#F0EFEC] rounded-[10px]" />
+        <div className="h-9 skeleton-shimmer rounded-[10px]" />
       </div>
     </div>
   )
@@ -52,6 +53,7 @@ function SkeletonCard() {
 export default function HomeProductsSection({ defaultCategory }: { defaultCategory?: string }) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { showToast } = useWebToast()
 
   const [allProducts, setAllProducts] = useState<ProductWithMeta[]>([])
   const [apiCategories, setApiCategories] = useState<CategorySummary[]>([])
@@ -173,6 +175,7 @@ export default function HomeProductsSection({ defaultCategory }: { defaultCatego
 
   function handleAddToCart(product: ProductWithMeta) {
     addToCart({ productId: product.id, productName: product.name, price: product.price, slug: product.slug ?? undefined })
+    showToast(`${product.name} 已加入購物車`)
     setAddedIds(prev => new Set([...prev, product.id]))
     const existing = timers.current.get(product.id)
     if (existing) clearTimeout(existing)
@@ -372,7 +375,7 @@ export default function HomeProductsSection({ defaultCategory }: { defaultCatego
                     <button
                       onClick={() => handleAddToCart(product)}
                       disabled={!inStock}
-                      className={`w-full text-[12px] md:text-[13px] font-semibold font-jakarta py-2 md:py-2.5 rounded-[10px] transition-all duration-200 active:scale-95 cursor-pointer disabled:cursor-default ${
+                      className={`w-full text-[12px] md:text-[13px] font-semibold font-jakarta py-2.5 min-h-[44px] rounded-[10px] transition-all duration-200 active:scale-95 cursor-pointer disabled:cursor-default ${
                         !inStock ? 'bg-[#F0EFEC] text-[#AEAAA4]'
                         : isAdded ? 'bg-[#5a7460] text-white'
                         : 'bg-[#7C9070] hover:bg-[#6a7d5f] text-white'
