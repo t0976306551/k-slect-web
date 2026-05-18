@@ -1,7 +1,4 @@
-'use client'
-
 import Link from 'next/link'
-import { CheckCircle } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,8 +6,36 @@ export default function CheckoutSuccessPage() {
   return (
     <div className="bg-[#F7F6F3] min-h-screen">
       <div className="max-w-[560px] mx-auto px-4 py-16 md:py-24 flex flex-col items-center gap-6 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#7C9070]/10 flex items-center justify-center">
-          <CheckCircle size={36} className="text-[#7C9070]" />
+        {/* Animated check icon */}
+        <div className="relative w-20 h-20">
+          <div
+            className="absolute inset-0 rounded-full bg-[#7C9070]/10"
+            style={{ animation: 'scale-in-spring 0.5s ease both' }}
+          />
+          <svg
+            viewBox="0 0 72 72"
+            className="absolute inset-0 w-full h-full"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle
+              cx="36" cy="36" r="28"
+              stroke="#7C9070"
+              strokeWidth="2.5"
+              strokeDasharray="176"
+              strokeDashoffset="176"
+              style={{ animation: 'draw-check 0.5s ease forwards 0.2s' }}
+            />
+            <path
+              d="M22 36 L32 46 L50 26"
+              stroke="#7C9070"
+              strokeWidth="2.5"
+              strokeDasharray="42"
+              strokeDashoffset="42"
+              style={{ animation: 'draw-check 0.4s ease forwards 0.65s' }}
+            />
+          </svg>
         </div>
 
         <div className="flex flex-col gap-2">

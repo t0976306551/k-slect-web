@@ -55,7 +55,7 @@ export default async function HomePage() {
               href="https://line.me"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-jakarta text-[13px] font-semibold text-[#06C755] border border-[#06C755] px-5 py-2.5 rounded-[10px] flex items-center gap-1.5 hover:bg-[#f0fff4] transition-colors"
+              className="font-jakarta text-[13px] font-semibold text-[#06C755] border border-[#06C755] px-5 py-2.5 rounded-[10px] flex items-center gap-1.5 hover:bg-[#06C755]/10 active:scale-[0.98] transition-all"
             >
               <MessageCircle size={14} />
               加入 LINE
@@ -88,7 +88,7 @@ export default async function HomePage() {
                 href="https://line.me"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-jakarta text-[14px] font-semibold text-[#06C755] border border-[#06C755] px-8 py-3.5 rounded-[10px] flex items-center gap-2 hover:bg-[#f0fff4] transition-colors"
+                className="font-jakarta text-[14px] font-semibold text-[#06C755] border border-[#06C755] px-8 py-3.5 rounded-[10px] flex items-center gap-2 hover:bg-[#06C755]/10 active:scale-[0.98] transition-all"
               >
                 <MessageCircle size={16} />
                 加入 LINE
@@ -133,7 +133,7 @@ export default async function HomePage() {
             href="https://line.me"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 font-jakarta text-[13px] md:text-[14px] font-semibold text-[#7C9070] bg-white px-6 md:px-8 py-2.5 md:py-3 rounded-[10px] flex items-center gap-2 hover:bg-[#f5f5f5] transition-colors self-start md:self-auto"
+            className="flex-shrink-0 font-jakarta text-[13px] md:text-[14px] font-semibold text-[#7C9070] bg-white px-6 md:px-8 py-2.5 md:py-3 rounded-[10px] flex items-center gap-2 hover:bg-[#F0EFEC] active:scale-[0.98] transition-all self-start md:self-auto"
           >
             <MessageCircle size={15} />
             立即加入
