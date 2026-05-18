@@ -154,7 +154,7 @@ export default function CartClient() {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleQuantityChange(item.productId, item.quantity - 1, item.variantId)}
-                      className="w-7 h-7 rounded-full border border-[#ECEAE6] flex items-center justify-center text-[#2D2D2D] hover:border-[#7C9070] hover:text-[#7C9070] active:scale-90 transition-all text-[16px] leading-none"
+                      className="w-10 h-10 rounded-full border border-[#ECEAE6] flex items-center justify-center text-[#2D2D2D] hover:border-[#7C9070] hover:text-[#7C9070] active:scale-90 transition-all text-[16px] leading-none"
                       aria-label="減少數量"
                     >
                       −
@@ -164,7 +164,7 @@ export default function CartClient() {
                     </span>
                     <button
                       onClick={() => handleQuantityChange(item.productId, item.quantity + 1, item.variantId)}
-                      className="w-7 h-7 rounded-full border border-[#ECEAE6] flex items-center justify-center text-[#2D2D2D] hover:border-[#7C9070] hover:text-[#7C9070] active:scale-90 transition-all text-[16px] leading-none"
+                      className="w-10 h-10 rounded-full border border-[#ECEAE6] flex items-center justify-center text-[#2D2D2D] hover:border-[#7C9070] hover:text-[#7C9070] active:scale-90 transition-all text-[16px] leading-none"
                       aria-label="增加數量"
                     >
                       +

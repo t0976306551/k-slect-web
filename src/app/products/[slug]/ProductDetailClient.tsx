@@ -16,11 +16,13 @@ import SkeletonDetail from './_components/SkeletonDetail'
 import StockInfo from './_components/StockInfo'
 import VariantSelector from './_components/VariantSelector'
 import useProductDetail from './_components/useProductDetail'
+import { useWebToast } from '@/components/WebToastProvider'
 
 export default function ProductDetailClient(): ReactElement {
   const params = useParams<{ slug: string }>()
   const id = params?.slug ?? ''
   const router = useRouter()
+  const { showToast } = useWebToast()
 
   const {
     product,
@@ -40,6 +42,11 @@ export default function ProductDetailClient(): ReactElement {
     isValueOutOfStock,
     handleAddToCart,
   } = useProductDetail(id)
+
+  function handleAddWithToast() {
+    handleAddToCart()
+    if (product) showToast(`${product.name} 已加入購物車`)
+  }
 
   if (loading) return <SkeletonDetail />
   if (error || !product) return <ErrorState message={error} onBack={() => router.back()} />
@@ -107,7 +114,7 @@ export default function ProductDetailClient(): ReactElement {
                 added={added}
                 disabled={ctaDisabled}
                 ctaLabel={ctaLabel}
-                onClick={handleAddToCart}
+                onClick={handleAddWithToast}
                 variant="desktop"
               />
               <Link
