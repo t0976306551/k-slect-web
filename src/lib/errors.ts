@@ -23,7 +23,7 @@ export class NotFoundError extends AppError {
   }
 }
 
-export class InsufficientStockError extends AppError {
+class InsufficientStockError extends AppError {
   constructor(productId: string) {
     super(`商品 ${productId} 庫存不足`, 'INSUFFICIENT_STOCK', 422)
     this.name = 'InsufficientStockError'

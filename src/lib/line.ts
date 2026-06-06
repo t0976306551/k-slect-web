@@ -111,7 +111,7 @@ export function buildLineContactUrl(items: CartItem[]): string {
     return 'https://line.me'
   }
   const message = buildCartLineMessage(items)
-  return `https://line.me/R/oaMessage/${oaId}/?${encodeURIComponent(message)}`
+  return `https://line.me/R/oaMessage/${oaId}/?text=${encodeURIComponent(message)}`
 }
 
 /**

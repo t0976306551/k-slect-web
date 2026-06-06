@@ -22,15 +22,21 @@ export default function TabBar() {
             <Link
               key={label}
               href={href}
-              className="flex flex-col items-center gap-1 min-w-[60px]"
+              className="flex flex-col items-center gap-1 min-w-[60px] relative active:scale-95 transition-transform duration-150"
             >
+              {isActive && (
+                <span
+                  className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#7C9070]"
+                  style={{ animation: 'scale-in 0.2s cubic-bezier(0.34,1.3,0.64,1) both' }}
+                />
+              )}
               <Icon
                 size={22}
-                className={isActive ? "text-[#7C9070]" : "text-[#9E9E9E]"}
+                className={`transition-colors duration-200 ${isActive ? "text-[#7C9070]" : "text-[#9E9E9E]"}`}
                 strokeWidth={isActive ? 2 : 1.5}
               />
               <span
-                className={`text-[10px] leading-none ${
+                className={`text-[10px] leading-none transition-colors duration-200 ${
                   isActive ? "text-[#7C9070] font-semibold" : "text-[#9E9E9E]"
                 }`}
               >

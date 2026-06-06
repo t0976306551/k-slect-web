@@ -157,7 +157,6 @@ model ProductVariant {
   lowStockThreshold   Int                  @default(5)
   status              String               @default("active")
   variantOptionValues VariantOptionValue[] // TypeORM 端：variant.optionValues（直接存取 ProductOptionValue[]）
-  orderItems          OrderItem[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 

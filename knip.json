@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "next": true,
+  "entry": [
+    "prisma/seed.ts"
+  ],
+  "ignoreDependencies": [
+    "pg",
+    "postcss-load-config"
+  ]
+}

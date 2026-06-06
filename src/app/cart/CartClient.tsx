@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Trash2, ShoppingBag, ArrowRight, Package } from 'lucide-react'
 import { getCart, updateQuantity, removeFromCart, getCartTotal, getCartCount } from '@/lib/cart'
 import type { CartItem } from '@/lib/cart'
 import LineIcon from '@/components/LineIcon'
-import { buildLineContactUrl } from '@/lib/line'
+import { buildLineContactUrl, buildCartLineMessage } from '@/lib/line'
 
 const REMOVE_ANIMATION_DURATION_MS = 250
 
@@ -47,6 +47,14 @@ export default function CartClient() {
 
   const total = getCartTotal(items)
   const count = getCartCount(items)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(async () => {
+    const text = buildCartLineMessage(items)
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [items])
 
   // ── Empty state ──
   if (items.length === 0) {
@@ -224,6 +232,7 @@ export default function CartClient() {
                 </span>
               </div>
 
+              {/* LINE 下單按鈕（手機用） */}
               <a
                 href={buildLineContactUrl(items)}
                 target="_blank"
@@ -233,6 +242,26 @@ export default function CartClient() {
                 <LineIcon size={16} />
                 透過 LINE 聯絡下單
               </a>
+
+              {/* 複製訂單（桌機用） */}
+              <button
+                onClick={handleCopy}
+                className="flex items-center justify-center gap-2 font-jakarta text-[13px] font-medium py-2.5 rounded-[10px] transition-all duration-200 active:scale-[0.98]"
+                style={{
+                  border: '1.5px solid #ECEAE6',
+                  color: copied ? '#7C9070' : '#6B6B6B',
+                  background: copied ? '#7C907010' : 'transparent',
+                }}
+              >
+                {copied ? (
+                  <>✓ 已複製訂單內容</>
+                ) : (
+                  <>複製訂單內容（貼到 LINE）</>
+                )}
+              </button>
+              <p className="text-[11px] text-center" style={{ fontFamily: 'var(--font-jakarta)', color: '#C4C0BA' }}>
+                桌機版 LINE 請使用複製功能
+              </p>
             </div>
           </div>
         </div>

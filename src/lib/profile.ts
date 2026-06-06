@@ -54,7 +54,7 @@ export function decodeProfile(value: string): MemberProfile | null {
   }
 }
 
-export function readProfileFromRequest(req: NextRequest): MemberProfile | null {
+function readProfileFromRequest(req: NextRequest): MemberProfile | null {
   const value = req.cookies.get(PROFILE_COOKIE_NAME)?.value
   if (!value) return null
   return decodeProfile(value)

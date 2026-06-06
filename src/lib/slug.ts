@@ -2,7 +2,7 @@
  * 將商品名稱轉為 SEO-friendly slug（kebab-case，英文/數字/連字號）
  * 中文字元需在呼叫前手動翻譯為英文，此函式不做音譯
  */
-export function generateSlug(name: string): string {
+function generateSlug(name: string): string {
   return name
     .toLowerCase()
     .trim()

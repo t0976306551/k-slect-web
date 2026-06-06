@@ -18,7 +18,7 @@ export function getCart(): CartItem[] {
   }
 }
 
-export function saveCart(items: CartItem[]): void {
+function saveCart(items: CartItem[]): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(CART_KEY, JSON.stringify(items))
 }

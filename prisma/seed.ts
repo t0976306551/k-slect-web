@@ -269,6 +269,8 @@ async function main() {
         items: {
           create: validItems.map((i) => ({
             productId: bySlug[i.slug].id,
+            productName: bySlug[i.slug].name,
+            sku: bySlug[i.slug].id,
             quantity: i.quantity,
             priceAtOrder: bySlug[i.slug].price,
           })),
